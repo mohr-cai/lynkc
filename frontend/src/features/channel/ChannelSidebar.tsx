@@ -44,31 +44,35 @@ export function ChannelSidebar({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="channel-id">Channel ID</Label>
-            <Input
-              id="channel-id"
-              placeholder="ghost-id"
-              value={channelInput}
-              onChange={(event) => onChannelInputChange(event.target.value)}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoComplete="off"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="channel-id">Channel ID</Label>
+              <Input
+                id="channel-id"
+                placeholder="ghost-id"
+                value={channelInput}
+                onChange={(event) => onChannelInputChange(event.target.value)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="channel-password">Channel password</Label>
+              <Input
+                id="channel-password"
+                placeholder="top-secret"
+                value={channelPasswordInput}
+                onChange={(event) => onChannelPasswordChange(event.target.value)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-2">
+              Required once per session to access a channel.
+            </p>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="channel-password">Channel password</Label>
-            <Input
-              id="channel-password"
-              placeholder="top-secret"
-              value={channelPasswordInput}
-              onChange={(event) => onChannelPasswordChange(event.target.value)}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoComplete="off"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Required once per session to access a channel.</p>
           <Button onClick={onJoinChannel} className="w-full" variant="secondary">
             Attach to channel
           </Button>

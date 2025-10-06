@@ -27,33 +27,35 @@ export function RemotePanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="remote" className="flex items-center gap-2">
-          Remote view
-        </Label>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onCopyRemote}
-          disabled={isLocked || !remoteContent}
-        >
-          <Copy className="mr-2 h-4 w-4" /> copy text
-        </Button>
-      </div>
-      <div className="relative">
-        <Textarea
-          id="remote"
-          spellCheck={false}
-          readOnly
-          value={isLocked ? placeholderContent : remoteContent}
-          className="min-h-[220px] bg-background/40 font-mono"
-        />
-        {isLocked ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
-            Password required to unlock remote view
-          </div>
-        ) : null}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="remote" className="flex items-center gap-2">
+            Remote view
+          </Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onCopyRemote}
+            disabled={isLocked || !remoteContent}
+          >
+            <Copy className="mr-2 h-4 w-4" /> copy text
+          </Button>
+        </div>
+        <div className="relative">
+          <Textarea
+            id="remote"
+            spellCheck={false}
+            readOnly
+            value={isLocked ? placeholderContent : remoteContent}
+            className="min-h-[220px] bg-background/40 font-mono"
+          />
+          {isLocked ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
+              Password required to unlock remote view
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">

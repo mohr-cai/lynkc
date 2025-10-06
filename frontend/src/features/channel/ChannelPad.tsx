@@ -51,7 +51,10 @@ export function ChannelPad({
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-2">
-        <Label htmlFor="local">Local draft</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="local">Local draft</Label>
+          <span className="text-xs text-muted-foreground opacity-0 select-none">copy text</span>
+        </div>
         <Textarea
           id="local"
           spellCheck={false}

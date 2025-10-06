@@ -23,9 +23,6 @@ interface ChannelPadProps {
   onRemoveFile: (id: string) => void;
   onCopyFile: (file: ChannelFile) => Promise<void>;
   onDownloadFile: (file: ChannelFile) => void;
-  onSync: () => void;
-  isSyncing: boolean;
-  channelId: string | null;
   onAddFilesHint?: string;
 }
 
@@ -44,9 +41,6 @@ export function ChannelPad({
   onRemoveFile,
   onCopyFile,
   onDownloadFile,
-  onSync,
-  isSyncing,
-  channelId,
 }: ChannelPadProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -136,9 +130,6 @@ export function ChannelPad({
           </p>
         </div>
       </div>
-      <Button onClick={onSync} disabled={isSyncing || !channelId}>
-        {isSyncing ? "syncing..." : "Sync up"}
-      </Button>
     </div>
   );
 }

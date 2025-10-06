@@ -1,6 +1,7 @@
 import { PlugZap } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useChannelController } from "./hooks";
 import { ChannelPad } from "./ChannelPad";
 import { ChannelSidebar } from "./ChannelSidebar";
@@ -70,9 +71,6 @@ export function ChannelShell() {
                 onRemoveFile={controller.handleRemoveLocalFile}
                 onCopyFile={controller.handleCopyFile}
                 onDownloadFile={controller.handleDownloadFile}
-                onSync={controller.handleSync}
-                isSyncing={controller.isSyncing}
-                channelId={controller.channelId}
               />
             </div>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
@@ -89,6 +87,15 @@ export function ChannelShell() {
                 isLocked={controller.requiresPassword}
                 onSelectEntry={controller.handleApplyHistoryEntry}
               />
+            </div>
+            <div className="md:col-span-2">
+              <Button
+                className="w-full"
+                onClick={controller.handleSync}
+                disabled={controller.isSyncing || !controller.channelId}
+              >
+                {controller.isSyncing ? "syncing..." : "Sync up"}
+              </Button>
             </div>
           </CardContent>
         </Card>

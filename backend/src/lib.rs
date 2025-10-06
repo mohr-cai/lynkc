@@ -20,7 +20,7 @@ use uuid::Uuid;
 const DEFAULT_CHANNEL_TTL_SECONDS: u64 = 900; // 15 minutes
 const CHANNEL_KEY_PREFIX: &str = "channel:";
 const MAX_CHANNEL_BYTES: usize = 100 * 1024 * 1024; // 100 MiB limit for text + files
-const MAX_REQUEST_BYTES: u64 = 200 * 1024 * 1024; // allow for base64 expansion
+const MAX_REQUEST_BYTES: usize = 200 * 1024 * 1024; // allow for base64 expansion
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ChannelFile {

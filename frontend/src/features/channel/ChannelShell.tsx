@@ -20,7 +20,7 @@ export function ChannelShell() {
         </div>
         <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Copy/paste via browser</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Rust + Redis behind TLS. Instant sync, zero disk, done.
+          Rust backed. Instant sync, zero disk.
         </p>
       </header>
 

@@ -17,17 +17,13 @@ function formatDuration(seconds: number) {
   if (seconds <= 0) {
     return "expired";
   }
-  if (seconds < 60) {
-    return `${seconds}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainderSeconds = seconds % 60;
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
   if (minutes < 60) {
-    return `${minutes}m ${remainderSeconds.toString().padStart(2, "0")}s`;
+    return `${minutes}m`;
   }
   const hours = Math.floor(minutes / 60);
   const remainderMinutes = minutes % 60;
-  return `${hours}h ${remainderMinutes}m`;
+  return remainderMinutes === 0 ? `${hours}h` : `${hours}h ${remainderMinutes}m`;
 }
 
 export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelProps) {
@@ -82,7 +78,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
               const expiresLabel = secondsRemaining === null ? null : formatDuration(secondsRemaining);
               const isExpiringSoon = typeof secondsRemaining === "number" && secondsRemaining > 0 && secondsRemaining <= 30;
               const ttlClasses = cn(
-                "inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-primary/80",
+                "inline-flex items-center justify-center rounded-full bg-primary/5 px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-primary/80",
                 isExpiringSoon && "text-destructive"
               );
 
@@ -100,7 +96,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
                       </span>
                       {expiresLabel ? <span className={ttlClasses}>{expiresLabel}</span> : <span>no ttl</span>}
                     </div>
-                    <div className="mt-2 text-sm">
+                    <div className="mt-3 text-sm">
                       {preview ? (
                         <p className="max-h-24 overflow-hidden break-words text-foreground">{preview}</p>
                       ) : (

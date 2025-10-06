@@ -104,7 +104,8 @@ pub fn deserialize_channel(raw: String) -> StoredChannel {
 #[cfg(test)]
 mod tests {
     use super::{
-        generate_channel_id, generate_channel_password, hash_channel_password, verify_channel_password,
+        generate_channel_id, generate_channel_password, hash_channel_password,
+        verify_channel_password,
     };
 
     #[test]

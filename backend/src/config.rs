@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, path::Path, time::Duration};
 
 use crate::error::AppError;
 
@@ -15,7 +15,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn from_env() -> Result<Self, AppError> {
-        dotenvy::dotenv().ok();
+        Self::load_env_file();
 
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
@@ -45,5 +45,17 @@ impl AppConfig {
             redis_url,
             channel_ttl: Duration::from_secs(channel_ttl_seconds),
         })
+    }
+
+    fn load_env_file() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        if let Some(workspace_root) = manifest_dir.parent() {
+            let root_env = workspace_root.join(".env");
+            if dotenvy::from_path(&root_env).is_ok() {
+                return;
+            }
+        }
+
+        dotenvy::dotenv().ok();
     }
 }

@@ -10,8 +10,8 @@ use tracing::instrument;
 use crate::{
     channel::{
         deserialize_channel, generate_channel_id, generate_channel_password, hash_channel_password,
-        serialize_channel, validate_channel_data, verify_channel_password, ChannelData, ChannelFile,
-        StoredChannel,
+        serialize_channel, validate_channel_data, verify_channel_password, ChannelData,
+        ChannelFile, StoredChannel,
     },
     error::AppError,
     state::{refresh_ttl, SharedState},
@@ -30,6 +30,8 @@ pub struct CreateChannelRequest {
     pub text: Option<String>,
     #[serde(default)]
     pub files: Vec<ChannelFile>,
+    #[serde(default)]
+    pub password: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -60,13 +62,27 @@ pub async fn create_channel(
     Json(payload): Json<CreateChannelRequest>,
 ) -> Result<(StatusCode, Json<CreateChannelResponse>), AppError> {
     let id = generate_channel_id();
+    let CreateChannelRequest {
+        text,
+        files,
+        password,
+    } = payload;
     let data = ChannelData {
-        text: payload.text.unwrap_or_default(),
-        files: payload.files,
+        text: text.unwrap_or_default(),
+        files,
     };
 
     validate_channel_data(&data)?;
-    let password = generate_channel_password();
+    let password = password
+        .and_then(|candidate| {
+            let trimmed = candidate.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_owned())
+            }
+        })
+        .unwrap_or_else(generate_channel_password);
     let password_hash = hash_channel_password(&password);
     let record = StoredChannel {
         password_hash: Some(password_hash),
@@ -108,7 +124,10 @@ pub async fn fetch_channel(
     };
 
     let record = deserialize_channel(raw);
-    if !verify_channel_password(record.password_hash.as_deref(), provided_password.as_deref()) {
+    if !verify_channel_password(
+        record.password_hash.as_deref(),
+        provided_password.as_deref(),
+    ) {
         return Err(AppError::InvalidChannelPassword);
     }
 
@@ -149,7 +168,10 @@ pub async fn update_channel(
         return Err(AppError::ChannelNotFound);
     };
     let mut record = deserialize_channel(raw);
-    if !verify_channel_password(record.password_hash.as_deref(), provided_password.as_deref()) {
+    if !verify_channel_password(
+        record.password_hash.as_deref(),
+        provided_password.as_deref(),
+    ) {
         return Err(AppError::InvalidChannelPassword);
     }
 

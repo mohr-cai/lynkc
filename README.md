@@ -36,14 +36,13 @@ Backend boots on `${BACKEND_HOST}:${BACKEND_PORT}` (default `0.0.0.0:8080`), Red
 
 ### Bare-metal dev
 ```bash
-# backend
+-# backend
 cd backend
-cp .env.example .env   # optional overrides
+# env lives at repo root `.env`
 cargo run
 
 # frontend
 cd ../frontend
-cp .env.example .env.local   # set VITE_API_BASE_URL if backend isn’t localhost
 npm install
 npm run dev
 ```
@@ -54,7 +53,7 @@ Build the static site with `npm run build`; serve `frontend/dist/` using whateve
 - `HOST` / `PORT` (or `BIND_ADDRESS`) – listen address for the API.
 - `REDIS_URL` – upstream cache; should point at something with persistence disabled.
 - `CHANNEL_TTL_SECONDS` – default 900 (15 min). Every fetch resets the clock.
-- Frontend uses `VITE_API_BASE_URL` at build time so the browser hits the right API origin.
+- Frontend reads the same root `.env` (via Vite) for `VITE_*` variables like `VITE_API_BASE_URL`.
 
 All payloads are capped at ~100 MB (text + attachments). Oversize requests get a `400 PayloadTooLarge` with nothing stored.
 

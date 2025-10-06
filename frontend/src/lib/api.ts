@@ -1,3 +1,11 @@
+export type ChannelFile = {
+  id: string;
+  name: string;
+  mime_type: string;
+  size: number;
+  data_base64: string;
+};
+
 export type CreateChannelResponse = {
   id: string;
   ttl_seconds: number;
@@ -5,7 +13,8 @@ export type CreateChannelResponse = {
 
 export type ChannelPayload = {
   id: string;
-  content: string;
+  text: string;
+  files: ChannelFile[];
   ttl_seconds: number;
 };
 
@@ -28,13 +37,13 @@ function buildUrl(path: string) {
   return `${base}${normalizedPath}`;
 }
 
-export async function createChannel(initialContent?: string) {
+export async function createChannel(text?: string, files: ChannelFile[] = []) {
   const response = await fetch(buildUrl("/api/channels"), {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ initial_content: initialContent ?? null })
+    body: JSON.stringify({ text: text ?? null, files }),
   });
 
   if (!response.ok) {
@@ -46,7 +55,7 @@ export async function createChannel(initialContent?: string) {
 
 export async function fetchChannel(id: string) {
   const response = await fetch(buildUrl(`/api/channels/${id}`), {
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (response.status === 404) {
@@ -60,13 +69,13 @@ export async function fetchChannel(id: string) {
   return (await response.json()) as ChannelPayload;
 }
 
-export async function updateChannel(id: string, content: string) {
+export async function updateChannel(id: string, text: string, files: ChannelFile[] = []) {
   const response = await fetch(buildUrl(`/api/channels/${id}`), {
     method: "PUT",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ content })
+    body: JSON.stringify({ text, files }),
   });
 
   if (response.status === 404) {

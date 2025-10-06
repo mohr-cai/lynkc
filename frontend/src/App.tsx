@@ -1,25 +1,87 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Copy, PlugZap } from "lucide-react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Copy, Download, Paperclip, PlugZap, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createChannel, fetchChannel, updateChannel } from "@/lib/api";
+import {
+  ChannelFile,
+  createChannel,
+  fetchChannel,
+  updateChannel,
+} from "@/lib/api";
+import { base64ToBlob, formatBytes } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2000;
+const MAX_CHANNEL_BYTES = 100 * 1024 * 1024; // keep in sync with backend limit
+
+function generateId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function readFileAsChannelFile(file: File): Promise<ChannelFile> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+  const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] ?? "" : dataUrl;
+
+  return {
+    id: generateId(),
+    name: file.name,
+    mime_type: file.type || "application/octet-stream",
+    size: file.size,
+    data_base64: base64,
+  };
+}
 
 export function App() {
   const [channelId, setChannelId] = useState<string | null>(null);
   const [channelInput, setChannelInput] = useState("");
   const [localContent, setLocalContent] = useState("");
+  const [localFiles, setLocalFiles] = useState<ChannelFile[]>([]);
   const [remoteContent, setRemoteContent] = useState("");
+  const [remoteFiles, setRemoteFiles] = useState<ChannelFile[]>([]);
   const [ttlSeconds, setTtlSeconds] = useState<number | null>(null);
   const [status, setStatus] = useState<string>("not linked");
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textEncoder = useMemo(() => new TextEncoder(), []);
+  const computeBytes = useCallback(
+    (textValue: string, filesValue: ChannelFile[]) => {
+      const textBytes = textEncoder.encode(textValue).length;
+      const filesBytes = filesValue.reduce((sum, file) => sum + file.size, 0);
+      return textBytes + filesBytes;
+    },
+    [textEncoder]
+  );
+
+  const enforceLimit = useCallback(
+    (textValue: string, filesValue: ChannelFile[]) => {
+      const total = computeBytes(textValue, filesValue);
+      if (total > MAX_CHANNEL_BYTES) {
+        setError(
+          `channel payload too large (${formatBytes(total)} / ${formatBytes(MAX_CHANNEL_BYTES)}). remove files or shrink text.`
+        );
+        return false;
+      }
+      return true;
+    },
+    [computeBytes]
+  );
+
+  const bytesUsed = useMemo(() => computeBytes(localContent, localFiles), [computeBytes, localContent, localFiles]);
+
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,7 +104,8 @@ export function App() {
       try {
         const data = await fetchChannel(channelId);
         if (cancelled) return;
-        setRemoteContent(data.content ?? "");
+        setRemoteContent(data.text ?? "");
+        setRemoteFiles(data.files ?? []);
         setTtlSeconds(data.ttl_seconds ?? null);
         setStatus("linked");
         setError(null);
@@ -74,13 +137,18 @@ export function App() {
   }, []);
 
   const handleCreateChannel = useCallback(async () => {
-    setIsCreating(true);
     setError(null);
+    if (!enforceLimit(localContent, localFiles)) {
+      return;
+    }
+
+    setIsCreating(true);
     try {
-      const channel = await createChannel(localContent || undefined);
+      const channel = await createChannel(localContent || undefined, localFiles);
       setChannelId(channel.id);
       setChannelInput(channel.id);
       setRemoteContent(localContent);
+      setRemoteFiles(localFiles);
       setTtlSeconds(channel.ttl_seconds ?? null);
       setStatus("linked");
       updateUrl(channel.id);
@@ -90,7 +158,7 @@ export function App() {
     } finally {
       setIsCreating(false);
     }
-  }, [localContent, updateUrl]);
+  }, [enforceLimit, localContent, localFiles, updateUrl]);
 
   const handleJoinChannel = useCallback(async () => {
     if (!channelInput.trim()) {
@@ -102,7 +170,8 @@ export function App() {
     try {
       const channel = await fetchChannel(channelInput.trim());
       setChannelId(channel.id);
-      setRemoteContent(channel.content ?? "");
+      setRemoteContent(channel.text ?? "");
+      setRemoteFiles(channel.files ?? []);
       setTtlSeconds(channel.ttl_seconds ?? null);
       setStatus("linked");
       updateUrl(channel.id);
@@ -118,10 +187,14 @@ export function App() {
       return;
     }
 
-    setIsSyncing(true);
     setError(null);
+    if (!enforceLimit(localContent, localFiles)) {
+      return;
+    }
+
+    setIsSyncing(true);
     try {
-      await updateChannel(channelId, localContent);
+      await updateChannel(channelId, localContent, localFiles);
       setStatus("synced just now");
     } catch (err) {
       console.error(err);
@@ -129,18 +202,82 @@ export function App() {
     } finally {
       setIsSyncing(false);
     }
-  }, [channelId, localContent]);
+  }, [channelId, enforceLimit, localContent, localFiles]);
 
   const handleCopyRemote = useCallback(async () => {
     if (!remoteContent) return;
     try {
       await navigator.clipboard.writeText(remoteContent);
-      setStatus("copied remote");
+      setStatus("copied remote text");
     } catch (err) {
       console.error(err);
-      setError("could not touch clipboard");
+      setError("could not touch clipboard (needs HTTPS)");
     }
   }, [remoteContent]);
+
+  const handleCopyFile = useCallback(async (file: ChannelFile) => {
+    try {
+      const blob = base64ToBlob(file.data_base64, file.mime_type || "application/octet-stream");
+      if (navigator.clipboard && "write" in navigator.clipboard && typeof ClipboardItem !== "undefined") {
+        const clipboardItem = new ClipboardItem({ [blob.type || "application/octet-stream"]: blob });
+        await navigator.clipboard.write([clipboardItem]);
+        setStatus(`copied ${file.name}`);
+      } else {
+        throw new Error("clipboard unavailable");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("clipboard blocked: initiated download instead");
+      const blob = base64ToBlob(file.data_base64, file.mime_type || "application/octet-stream");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
+  const handleDownloadFile = useCallback((file: ChannelFile) => {
+    const blob = base64ToBlob(file.data_base64, file.mime_type || "application/octet-stream");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name || "attachment";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setStatus(`downloaded ${file.name}`);
+  }, []);
+
+  const handleFileSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (!files.length) {
+      return;
+    }
+
+    try {
+      setError(null);
+      const processed = await Promise.all(files.map(readFileAsChannelFile));
+      const nextFiles = [...localFiles, ...processed];
+      if (!enforceLimit(localContent, nextFiles)) {
+        return;
+      }
+      setLocalFiles(nextFiles);
+    } catch (err) {
+      console.error(err);
+      setError("failed to read file");
+    } finally {
+      event.target.value = "";
+    }
+  }, [enforceLimit, localContent, localFiles]);
+
+  const handleRemoveLocalFile = useCallback((id: string) => {
+    setLocalFiles((prev) => prev.filter((file) => file.id !== id));
+  }, []);
 
   const ttlLabel = useMemo(() => {
     if (ttlSeconds === null) return "--";
@@ -166,7 +303,7 @@ export function App() {
         </p>
       </header>
 
-      <section className="grid gap-6 md:grid-cols-[280px_1fr]">
+      <section className="grid gap-6 md:grid-cols-[320px_1fr]">
         <Card>
           <CardHeader>
             <CardTitle>Channel control</CardTitle>
@@ -226,27 +363,83 @@ export function App() {
             ) : null}
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="local">Local draft</Label>
-              <Textarea
-                id="local"
-                spellCheck={false}
-                placeholder="paste from your real clipboard"
-                value={localContent}
-                onChange={(event) => setLocalContent(event.target.value)}
-                className="min-h-[220px] bg-background/60 backdrop-blur"
-              />
+            <div className="flex flex-col gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="local">Local draft</Label>
+                <Textarea
+                  id="local"
+                  spellCheck={false}
+                  placeholder="paste from your real clipboard"
+                  value={localContent}
+                  onChange={(event) => setLocalContent(event.target.value)}
+                  className="min-h-[220px] bg-background/60 backdrop-blur"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" /> Attachments
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Add files
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
+                  {localFiles.length === 0 ? (
+                    <p className="text-muted-foreground">No local files yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {localFiles.map((file) => (
+                        <li key={file.id} className="flex items-center justify-between gap-3">
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate font-medium">{file.name}</span>
+                            <span className="text-muted-foreground">{formatBytes(file.size)}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveLocalFile(file.id)}
+                            title="Remove file"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-2 text-[0.7rem] text-muted-foreground">
+                    Payload: {formatBytes(bytesUsed)} / {formatBytes(MAX_CHANNEL_BYTES)}
+                  </p>
+                </div>
+              </div>
               <Button onClick={handleSync} disabled={isSyncing || !channelId}>
                 {isSyncing ? "syncing..." : "Sync up"}
               </Button>
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="remote" className="flex items-center justify-between">
-                Remote view
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="remote" className="flex items-center gap-2">
+                  Remote view
+                </Label>
                 <Button type="button" size="sm" variant="ghost" onClick={handleCopyRemote} disabled={!remoteContent}>
-                  <Copy className="mr-2 h-4 w-4" /> tap
+                  <Copy className="mr-2 h-4 w-4" /> copy text
                 </Button>
-              </Label>
+              </div>
               <Textarea
                 id="remote"
                 spellCheck={false}
@@ -254,6 +447,45 @@ export function App() {
                 value={remoteContent}
                 className="min-h-[220px] bg-background/40 font-mono"
               />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Paperclip className="h-4 w-4 text-primary" /> Remote attachments
+                </div>
+                <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
+                  {remoteFiles.length === 0 ? (
+                    <p className="text-muted-foreground">No remote files in this channel.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {remoteFiles.map((file) => (
+                        <li key={file.id} className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{file.name}</span>
+                          <span className="text-muted-foreground">{formatBytes(file.size)}</span>
+                          <div className="ml-auto flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleCopyFile(file)}
+                              title="Copy to clipboard"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDownloadFile(file)}
+                              title="Download file"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

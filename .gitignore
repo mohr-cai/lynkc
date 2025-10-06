@@ -3,7 +3,7 @@ backend/target
 frontend/node_modules
 
 # build artifacts
-frontend/.next
+frontend/dist
 
 # local env
 .env

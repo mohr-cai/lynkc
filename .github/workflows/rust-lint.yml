@@ -1,0 +1,40 @@
+name: Rust Lint
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/rust-lint.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/rust-lint.yml'
+
+jobs:
+  lint:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend -> target
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings

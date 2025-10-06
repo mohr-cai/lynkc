@@ -36,7 +36,7 @@ Backend boots on `${BACKEND_HOST}:${BACKEND_PORT}` (default `0.0.0.0:8080`), Red
 
 ### Bare-metal dev
 ```bash
--# backend
+# backend
 cd backend
 # env lives at repo root `.env`
 cargo run

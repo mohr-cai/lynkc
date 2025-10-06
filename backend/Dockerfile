@@ -1,10 +1,10 @@
-FROM rust:1.77 AS builder
+FROM rust:1.82 AS builder
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock* ./
 COPY src ./src
 
-RUN cargo build --release
+RUN cargo build 
 
 FROM debian:bookworm-slim
 RUN useradd --create-home appuser

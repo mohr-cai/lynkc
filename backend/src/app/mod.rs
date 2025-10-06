@@ -1,8 +1,8 @@
 mod handlers;
 
 pub use handlers::{
-    create_channel, fetch_channel, health_check, update_channel, ChannelPayloadResponse, CreateChannelRequest,
-    CreateChannelResponse, UpdateChannelRequest,
+    create_channel, fetch_channel, health_check, update_channel, ChannelPayloadResponse,
+    CreateChannelRequest, CreateChannelResponse, UpdateChannelRequest,
 };
 
 use axum::{

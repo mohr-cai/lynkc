@@ -17,8 +17,8 @@ impl AppConfig {
     pub fn from_env() -> Result<Self, AppError> {
         dotenvy::dotenv().ok();
 
-        let redis_url = std::env::var("REDIS_URL")
-            .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
 
         let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let port = std::env::var("PORT")
@@ -28,7 +28,11 @@ impl AppConfig {
 
         let bind_address = std::env::var("BIND_ADDRESS")
             .map(|raw| raw.parse().map_err(AppError::BindAddress))
-            .unwrap_or_else(|_| format!("{host}:{port}").parse().map_err(AppError::BindAddress))?;
+            .unwrap_or_else(|_| {
+                format!("{host}:{port}")
+                    .parse()
+                    .map_err(AppError::BindAddress)
+            })?;
 
         let channel_ttl_seconds = std::env::var("CHANNEL_TTL_SECONDS")
             .ok()

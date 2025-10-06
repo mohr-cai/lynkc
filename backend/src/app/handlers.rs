@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    channel::{deserialize_channel, generate_channel_id, serialize_channel, validate_channel_data, ChannelData, ChannelFile},
+    channel::{
+        deserialize_channel, generate_channel_id, serialize_channel, validate_channel_data,
+        ChannelData, ChannelFile,
+    },
     error::AppError,
     state::{refresh_ttl, SharedState},
 };

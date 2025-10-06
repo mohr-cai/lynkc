@@ -27,9 +27,10 @@ impl IntoResponse for AppError {
         let status = match self {
             AppError::ChannelNotFound => StatusCode::NOT_FOUND,
             AppError::PayloadTooLarge | AppError::InvalidFileData => StatusCode::BAD_REQUEST,
-            AppError::BindAddress(_) | AppError::Redis(_) | AppError::Io(_) | AppError::Serialization(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            AppError::BindAddress(_)
+            | AppError::Redis(_)
+            | AppError::Io(_)
+            | AppError::Serialization(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (status, Json(ErrorResponse::from(self))).into_response()

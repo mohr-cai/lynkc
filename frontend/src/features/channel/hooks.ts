@@ -288,7 +288,15 @@ export function useChannelController() {
   }, [channelId]);
 
   const createChannelMutation = useMutation({
-    mutationFn: ({ text, files }: { text?: string; files: ChannelFile[] }) => createChannel(text, files),
+    mutationFn: ({
+      text,
+      files,
+      password,
+    }: {
+      text?: string;
+      files: ChannelFile[];
+      password: string;
+    }) => createChannel({ text, files, password }),
   });
 
   const updateChannelMutation = useMutation({
@@ -312,9 +320,17 @@ export function useChannelController() {
     }
 
     try {
+      const trimmedPassword = channelPasswordInput.trim();
+      if (!trimmedPassword) {
+        setStatus("password required");
+        setError("channel password required");
+        return;
+      }
+
       const channel = await createChannelMutation.mutateAsync({
         text: localContent || undefined,
         files: localFiles,
+        password: trimmedPassword,
       });
 
       setChannelPassword(channel.password);
@@ -341,6 +357,7 @@ export function useChannelController() {
     }
   }, [
     createChannelMutation,
+    channelPasswordInput,
     enforceLimit,
     localContent,
     localFiles,

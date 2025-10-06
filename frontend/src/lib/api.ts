@@ -40,13 +40,21 @@ function buildUrl(path: string) {
   return `${base}${normalizedPath}`;
 }
 
-export async function createChannel(text?: string, files: ChannelFile[] = []) {
+export async function createChannel({
+  text,
+  files = [],
+  password,
+}: {
+  text?: string;
+  files?: ChannelFile[];
+  password?: string;
+}) {
   const response = await fetch(buildUrl("/api/channels"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text: text ?? null, files }),
+    body: JSON.stringify({ text: text ?? null, files, password: password ?? null }),
   });
 
   if (!response.ok) {

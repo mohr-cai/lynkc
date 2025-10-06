@@ -51,18 +51,6 @@ export function ChannelShell() {
                 Type or paste locally, then blast it through the tunnel. Remote view refreshes every 2s.
               </CardDescription>
             </div>
-            {controller.channelId ? (
-              <div className="flex flex-col items-end gap-1">
-                <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-mono text-muted-foreground">
-                  id: {controller.channelId}
-                </span>
-                {controller.channelPassword ? (
-                  <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-mono text-muted-foreground">
-                    pw: {controller.channelPassword}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
             <ChannelPad

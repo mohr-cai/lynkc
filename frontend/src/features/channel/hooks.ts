@@ -1,5 +1,7 @@
 import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChannelFile, createChannel, fetchChannel, updateChannel } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { ChannelFile, ChannelPayload, createChannel, fetchChannel, updateChannel } from "@/lib/api";
 import { base64ToBlob, CHANNEL_BYTE_LIMIT, formatBytes } from "@/lib/files";
 
 const POLL_INTERVAL_MS = 2000;
@@ -35,16 +37,30 @@ export function useChannelController() {
   const [channelInput, setChannelInput] = useState("");
   const [localContent, setLocalContent] = useState("");
   const [localFiles, setLocalFiles] = useState<ChannelFile[]>([]);
-  const [remoteContent, setRemoteContent] = useState("");
-  const [remoteFiles, setRemoteFiles] = useState<ChannelFile[]>([]);
-  const [ttlSeconds, setTtlSeconds] = useState<number | null>(null);
   const [status, setStatus] = useState<string>("not linked");
   const [error, setError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textEncoder = useMemo(() => new TextEncoder(), []);
+
+  const queryClient = useQueryClient();
+
+  const channelQuery = useQuery<ChannelPayload>({
+    queryKey: ["channel", channelId],
+    queryFn: async () => {
+      if (!channelId) {
+        throw new Error("channel id missing");
+      }
+      return fetchChannel(channelId);
+    },
+    enabled: !!channelId,
+    refetchInterval: POLL_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+  });
+
+  const remoteContent = channelQuery.data?.text ?? "";
+  const remoteFiles = channelQuery.data?.files ?? [];
+  const ttlSeconds = channelQuery.data?.ttl_seconds ?? null;
 
   const computeBytes = useCallback(
     (textValue: string, filesValue: ChannelFile[]) => {
@@ -119,37 +135,18 @@ export function useChannelController() {
       return;
     }
 
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
+    if (channelQuery.isError) {
+      console.error(channelQuery.error);
+      setStatus("channel glitch?");
+      setError((channelQuery.error as Error).message);
+      return;
+    }
 
-    const poll = async () => {
-      try {
-        const data = await fetchChannel(channelId);
-        if (cancelled) return;
-        setRemoteContent(data.text ?? "");
-        setRemoteFiles(data.files ?? []);
-        setTtlSeconds(data.ttl_seconds ?? null);
-        setStatus("linked");
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        if (cancelled) return;
-        setStatus("channel glitch?");
-        setError((err as Error).message);
-      } finally {
-        if (!cancelled) {
-          timeout = setTimeout(poll, POLL_INTERVAL_MS);
-        }
-      }
-    };
-
-    poll();
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [channelId]);
+    if (channelQuery.isSuccess) {
+      setStatus("linked");
+      setError(null);
+    }
+  }, [channelId, channelQuery.error, channelQuery.isError, channelQuery.isSuccess]);
 
   const channelLink = useMemo(() => {
     if (!channelId || typeof window === "undefined") {
@@ -161,21 +158,36 @@ export function useChannelController() {
     return url.toString();
   }, [channelId]);
 
+  const createChannelMutation = useMutation({
+    mutationFn: ({ text, files }: { text?: string; files: ChannelFile[] }) => createChannel(text, files),
+  });
+
+  const updateChannelMutation = useMutation({
+    mutationFn: ({ id, text, files }: { id: string; text: string; files: ChannelFile[] }) => updateChannel(id, text, files),
+  });
+
   const handleCreateChannel = useCallback(async () => {
     setError(null);
     if (!enforceLimit(localContent, localFiles)) {
       return;
     }
 
-    setIsCreating(true);
     try {
-      const channel = await createChannel(localContent || undefined, localFiles);
+      const channel = await createChannelMutation.mutateAsync({
+        text: localContent || undefined,
+        files: localFiles,
+      });
+
       setChannelId(channel.id);
       setChannelInput(channel.id);
-      setRemoteContent(localContent);
-      setRemoteFiles(localFiles);
-      setTtlSeconds(channel.ttl_seconds ?? null);
       setStatus("linked");
+
+      queryClient.setQueryData<ChannelPayload>(["channel", channel.id], {
+        id: channel.id,
+        text: localContent,
+        files: localFiles,
+        ttl_seconds: channel.ttl_seconds ?? null,
+      });
 
       const params = new URLSearchParams(window.location.search);
       params.set("channel", channel.id);
@@ -184,10 +196,8 @@ export function useChannelController() {
     } catch (err) {
       console.error(err);
       setError((err as Error).message);
-    } finally {
-      setIsCreating(false);
     }
-  }, [enforceLimit, localContent, localFiles]);
+  }, [createChannelMutation, enforceLimit, localContent, localFiles, queryClient]);
 
   const handleJoinChannel = useCallback(async () => {
     if (!channelInput.trim()) {
@@ -197,12 +207,13 @@ export function useChannelController() {
 
     setError(null);
     try {
-      const channel = await fetchChannel(channelInput.trim());
+      const trimmed = channelInput.trim();
+      const channel = await fetchChannel(trimmed);
       setChannelId(channel.id);
-      setRemoteContent(channel.text ?? "");
-      setRemoteFiles(channel.files ?? []);
-      setTtlSeconds(channel.ttl_seconds ?? null);
+      setChannelInput(channel.id);
       setStatus("linked");
+
+      queryClient.setQueryData<ChannelPayload>(["channel", channel.id], channel);
 
       const params = new URLSearchParams(window.location.search);
       params.set("channel", channel.id);
@@ -212,7 +223,7 @@ export function useChannelController() {
       console.error(err);
       setError((err as Error).message);
     }
-  }, [channelInput]);
+  }, [channelInput, queryClient]);
 
   const handleSync = useCallback(async () => {
     if (!channelId) {
@@ -225,17 +236,35 @@ export function useChannelController() {
       return;
     }
 
-    setIsSyncing(true);
     try {
-      await updateChannel(channelId, localContent, localFiles);
+      await updateChannelMutation.mutateAsync({
+        id: channelId,
+        text: localContent,
+        files: localFiles,
+      });
       setStatus("synced just now");
+
+      queryClient.setQueryData<ChannelPayload | undefined>(["channel", channelId], (previous) => {
+        if (!previous) {
+          return {
+            id: channelId,
+            text: localContent,
+            files: localFiles,
+            ttl_seconds: ttlSeconds,
+          } as ChannelPayload;
+        }
+
+        return {
+          ...previous,
+          text: localContent,
+          files: localFiles,
+        };
+      });
     } catch (err) {
       console.error(err);
       setError((err as Error).message);
-    } finally {
-      setIsSyncing(false);
     }
-  }, [channelId, enforceLimit, localContent, localFiles]);
+  }, [channelId, enforceLimit, localContent, localFiles, queryClient, ttlSeconds, updateChannelMutation]);
 
   const handleCopyRemote = useCallback(async () => {
     if (!remoteContent) return;
@@ -365,6 +394,9 @@ export function useChannelController() {
     const seconds = ttlSeconds % 60;
     return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
   }, [ttlSeconds]);
+
+  const isCreating = createChannelMutation.isPending;
+  const isSyncing = updateChannelMutation.isPending;
 
   return {
     channelId,

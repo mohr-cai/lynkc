@@ -207,7 +207,7 @@ pub async fn run() -> Result<(), AppError> {
                 .allow_origin(tower_http::cors::Any)
                 .allow_headers(tower_http::cors::Any),
         )
-        .layer(DefaultBodyLimit::max(MAX_REQUEST_BYTES as u64))
+        .layer(DefaultBodyLimit::max(MAX_REQUEST_BYTES))
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state.clone());
 

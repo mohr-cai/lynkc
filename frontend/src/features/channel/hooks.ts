@@ -5,6 +5,7 @@ import { ChannelFile, ChannelPayload, createChannel, fetchChannel, updateChannel
 import { base64ToBlob, CHANNEL_BYTE_LIMIT, formatBytes } from "@/lib/files";
 
 const POLL_INTERVAL_MS = 2000;
+const SESSION_STORAGE_KEY_PREFIX = "lynkc-channel-password:";
 
 function generateId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -35,6 +36,8 @@ async function readFileAsChannelFile(file: File): Promise<ChannelFile> {
 export function useChannelController() {
   const [channelId, setChannelId] = useState<string | null>(null);
   const [channelInput, setChannelInput] = useState("");
+  const [channelPassword, setChannelPassword] = useState<string | null>(null);
+  const [channelPasswordInput, setChannelPasswordInput] = useState("");
   const [localContent, setLocalContent] = useState("");
   const [localFiles, setLocalFiles] = useState<ChannelFile[]>([]);
   const [status, setStatus] = useState<string>("not linked");
@@ -45,17 +48,99 @@ export function useChannelController() {
 
   const queryClient = useQueryClient();
 
+  const storageKeyForChannel = useCallback((id: string) => `${SESSION_STORAGE_KEY_PREFIX}${id}`, []);
+
+  const readStoredPassword = useCallback(
+    (id: string) => {
+      if (typeof window === "undefined") {
+        return null;
+      }
+      try {
+        return window.sessionStorage.getItem(storageKeyForChannel(id));
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    },
+    [storageKeyForChannel]
+  );
+
+  const persistStoredPassword = useCallback(
+    (id: string, password: string) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      try {
+        window.sessionStorage.setItem(storageKeyForChannel(id), password);
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [storageKeyForChannel]
+  );
+
+  const removeStoredPassword = useCallback(
+    (id: string) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      try {
+        window.sessionStorage.removeItem(storageKeyForChannel(id));
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [storageKeyForChannel]
+  );
+
+  const clearChannelState = useCallback(
+    ({ channelId: id, status: nextStatus, error: nextError }: { channelId?: string; status?: string; error?: string }) => {
+      if (id) {
+        removeStoredPassword(id);
+        queryClient.removeQueries({ queryKey: ["channel", id], exact: false });
+      }
+
+      setChannelId(null);
+      setChannelInput("");
+      setChannelPassword(null);
+      setChannelPasswordInput("");
+      setLocalContent("");
+      setLocalFiles([]);
+      setStatus(nextStatus ?? "not linked");
+      setError(nextError ?? null);
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        params.delete("channel");
+        const queryString = params.toString();
+        const next = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        window.history.replaceState(null, "", next);
+      }
+    },
+    [queryClient, removeStoredPassword]
+  );
+
   const channelQuery = useQuery<ChannelPayload>({
-    queryKey: ["channel", channelId],
+    queryKey: ["channel", channelId, channelPassword],
     queryFn: async () => {
       if (!channelId) {
         throw new Error("channel id missing");
       }
-      return fetchChannel(channelId);
+      if (!channelPassword) {
+        throw new Error("channel password missing");
+      }
+      return fetchChannel(channelId, channelPassword);
     },
-    enabled: !!channelId,
+    enabled: !!channelId && !!channelPassword,
     refetchInterval: POLL_INTERVAL_MS,
     refetchIntervalInBackground: true,
+    retry: (failureCount, error) => {
+      const message = (error as Error).message;
+      if (message === "invalid channel password") {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   const remoteContent = channelQuery.data?.text ?? "";
@@ -132,13 +217,50 @@ export function useChannelController() {
 
   useEffect(() => {
     if (!channelId) {
+      setChannelPassword(null);
+      setChannelPasswordInput("");
+      return;
+    }
+
+    if (channelPassword) {
+      return;
+    }
+
+    const stored = readStoredPassword(channelId);
+    if (stored) {
+      setChannelPassword(stored);
+      setChannelPasswordInput(stored);
+    }
+  }, [channelId, channelPassword, readStoredPassword]);
+
+  useEffect(() => {
+    if (!channelId) {
       return;
     }
 
     if (channelQuery.isError) {
-      console.error(channelQuery.error);
+      const err = channelQuery.error as Error;
+      console.error(err);
+      const message = err.message;
+      if (message === "channel password missing") {
+        setStatus("password required");
+        setError("channel password required");
+        return;
+      }
+      if (message === "invalid channel password") {
+        setStatus("password required");
+        setError(message);
+        setChannelPassword(null);
+        setChannelPasswordInput("");
+        removeStoredPassword(channelId);
+        return;
+      }
+      if (message === "channel not found") {
+        clearChannelState({ channelId: channelId ?? undefined, status: "channel expired", error: message });
+        return;
+      }
       setStatus("channel glitch?");
-      setError((channelQuery.error as Error).message);
+      setError(message);
       return;
     }
 
@@ -146,7 +268,14 @@ export function useChannelController() {
       setStatus("linked");
       setError(null);
     }
-  }, [channelId, channelQuery.error, channelQuery.isError, channelQuery.isSuccess]);
+  }, [
+    channelId,
+    channelQuery.error,
+    channelQuery.isError,
+    channelQuery.isSuccess,
+    removeStoredPassword,
+    clearChannelState,
+  ]);
 
   const channelLink = useMemo(() => {
     if (!channelId || typeof window === "undefined") {
@@ -163,7 +292,17 @@ export function useChannelController() {
   });
 
   const updateChannelMutation = useMutation({
-    mutationFn: ({ id, text, files }: { id: string; text: string; files: ChannelFile[] }) => updateChannel(id, text, files),
+    mutationFn: ({
+      id,
+      password,
+      text,
+      files,
+    }: {
+      id: string;
+      password: string;
+      text: string;
+      files: ChannelFile[];
+    }) => updateChannel(id, password, text, files),
   });
 
   const handleCreateChannel = useCallback(async () => {
@@ -178,11 +317,14 @@ export function useChannelController() {
         files: localFiles,
       });
 
+      setChannelPassword(channel.password);
+      setChannelPasswordInput(channel.password);
+      persistStoredPassword(channel.id, channel.password);
       setChannelId(channel.id);
       setChannelInput(channel.id);
       setStatus("linked");
 
-      queryClient.setQueryData<ChannelPayload>(["channel", channel.id], {
+      queryClient.setQueryData<ChannelPayload>(["channel", channel.id, channel.password], {
         id: channel.id,
         text: localContent,
         files: localFiles,
@@ -197,7 +339,14 @@ export function useChannelController() {
       console.error(err);
       setError((err as Error).message);
     }
-  }, [createChannelMutation, enforceLimit, localContent, localFiles, queryClient]);
+  }, [
+    createChannelMutation,
+    enforceLimit,
+    localContent,
+    localFiles,
+    persistStoredPassword,
+    queryClient,
+  ]);
 
   const handleJoinChannel = useCallback(async () => {
     if (!channelInput.trim()) {
@@ -208,12 +357,29 @@ export function useChannelController() {
     setError(null);
     try {
       const trimmed = channelInput.trim();
-      const channel = await fetchChannel(trimmed);
+      let passwordToUse = channelPasswordInput.trim();
+      if (!passwordToUse) {
+        const stored = readStoredPassword(trimmed);
+        if (stored) {
+          passwordToUse = stored;
+          setChannelPasswordInput(stored);
+        }
+      }
+
+      if (!passwordToUse) {
+        setStatus("password required");
+        setError("channel password required");
+        return;
+      }
+
+      const channel = await fetchChannel(trimmed, passwordToUse);
+      setChannelPassword(passwordToUse);
+      persistStoredPassword(channel.id, passwordToUse);
       setChannelId(channel.id);
       setChannelInput(channel.id);
       setStatus("linked");
 
-      queryClient.setQueryData<ChannelPayload>(["channel", channel.id], channel);
+      queryClient.setQueryData<ChannelPayload>(["channel", channel.id, passwordToUse], channel);
 
       const params = new URLSearchParams(window.location.search);
       params.set("channel", channel.id);
@@ -221,13 +387,39 @@ export function useChannelController() {
       window.history.replaceState(null, "", next);
     } catch (err) {
       console.error(err);
-      setError((err as Error).message);
+      const message = (err as Error).message;
+      setError(message);
+      const trimmed = channelInput.trim();
+      if (message === "invalid channel password") {
+        setStatus("password required");
+        setChannelPassword(null);
+        setChannelPasswordInput("");
+        removeStoredPassword(trimmed);
+        return;
+      }
+      if (message === "channel not found") {
+        clearChannelState({ channelId: trimmed, status: "channel not found", error: message });
+      }
     }
-  }, [channelInput, queryClient]);
+  }, [
+    channelInput,
+    channelPasswordInput,
+    persistStoredPassword,
+    queryClient,
+    readStoredPassword,
+    removeStoredPassword,
+    clearChannelState,
+  ]);
 
   const handleSync = useCallback(async () => {
     if (!channelId) {
       setError("no channel yet");
+      return;
+    }
+
+    if (!channelPassword) {
+      setStatus("password required");
+      setError("channel password required");
       return;
     }
 
@@ -239,35 +431,48 @@ export function useChannelController() {
     try {
       await updateChannelMutation.mutateAsync({
         id: channelId,
+        password: channelPassword,
         text: localContent,
         files: localFiles,
       });
       setStatus("synced just now");
 
-      queryClient.setQueryData<ChannelPayload | undefined>(["channel", channelId], (previous) => {
-        if (!previous) {
+      queryClient.setQueryData<ChannelPayload | undefined>(
+        ["channel", channelId, channelPassword],
+        (previous) => {
+          if (!previous) {
+            return {
+              id: channelId,
+              text: localContent,
+              files: localFiles,
+              ttl_seconds: ttlSeconds,
+            } as ChannelPayload;
+          }
+
           return {
-            id: channelId,
+            ...previous,
             text: localContent,
             files: localFiles,
-            ttl_seconds: ttlSeconds,
-          } as ChannelPayload;
+          };
         }
-
-        return {
-          ...previous,
-          text: localContent,
-          files: localFiles,
-        };
-      });
+      );
     } catch (err) {
       console.error(err);
       setError((err as Error).message);
     }
-  }, [channelId, enforceLimit, localContent, localFiles, queryClient, ttlSeconds, updateChannelMutation]);
+  }, [
+    channelId,
+    channelPassword,
+    enforceLimit,
+    localContent,
+    localFiles,
+    queryClient,
+    ttlSeconds,
+    updateChannelMutation,
+  ]);
 
   const handleCopyRemote = useCallback(async () => {
-    if (!remoteContent) return;
+    if (!remoteContent || !channelPassword) return;
     try {
       await navigator.clipboard.writeText(remoteContent);
       setStatus("copied remote text");
@@ -275,7 +480,7 @@ export function useChannelController() {
       console.error(err);
       setError("could not touch clipboard (needs HTTPS)");
     }
-  }, [remoteContent]);
+  }, [channelPassword, remoteContent]);
 
   const handleCopyFile = useCallback(async (file: ChannelFile) => {
     try {
@@ -386,6 +591,21 @@ export function useChannelController() {
     }
   }, [channelLink]);
 
+  const handleCopyChannelPassword = useCallback(async () => {
+    if (!channelPassword) {
+      setError("no channel password yet");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(channelPassword);
+      setStatus("channel password copied");
+    } catch (err) {
+      console.error(err);
+      setError("could not copy password (needs HTTPS)");
+    }
+  }, [channelPassword]);
+
   const ttlLabel = useMemo(() => {
     if (ttlSeconds === null) return "--";
     if (ttlSeconds <= 0) return "expiring";
@@ -402,6 +622,9 @@ export function useChannelController() {
     channelId,
     channelInput,
     setChannelInput,
+    channelPassword,
+    channelPasswordInput,
+    setChannelPasswordInput,
     channelLink,
     status,
     error,
@@ -415,6 +638,7 @@ export function useChannelController() {
     localFiles,
     remoteContent,
     remoteFiles,
+    requiresPassword: !!channelId && !channelPassword,
     bytesUsed,
     channelByteLimit: CHANNEL_BYTE_LIMIT,
     handleCreateChannel,
@@ -429,5 +653,6 @@ export function useChannelController() {
     handleDragLeave,
     handleDrop,
     handleCopyChannelLink,
+    handleCopyChannelPassword,
   };
 }

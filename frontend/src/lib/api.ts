@@ -8,6 +8,7 @@ export type ChannelFile = {
 
 export type CreateChannelResponse = {
   id: string;
+  password: string;
   ttl_seconds: number;
 };
 
@@ -17,6 +18,8 @@ export type ChannelPayload = {
   files: ChannelFile[];
   ttl_seconds: number;
 };
+
+const CHANNEL_PASSWORD_HEADER = "x-channel-password";
 
 function getApiBaseUrl() {
   const fromEnv = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -53,13 +56,20 @@ export async function createChannel(text?: string, files: ChannelFile[] = []) {
   return (await response.json()) as CreateChannelResponse;
 }
 
-export async function fetchChannel(id: string) {
+export async function fetchChannel(id: string, password: string) {
   const response = await fetch(buildUrl(`/api/channels/${id}`), {
     cache: "no-store",
+    headers: {
+      [CHANNEL_PASSWORD_HEADER]: password,
+    },
   });
 
   if (response.status === 404) {
     throw new Error("channel not found");
+  }
+
+  if (response.status === 401) {
+    throw new Error("invalid channel password");
   }
 
   if (!response.ok) {
@@ -69,17 +79,22 @@ export async function fetchChannel(id: string) {
   return (await response.json()) as ChannelPayload;
 }
 
-export async function updateChannel(id: string, text: string, files: ChannelFile[] = []) {
+export async function updateChannel(id: string, password: string, text: string, files: ChannelFile[] = []) {
   const response = await fetch(buildUrl(`/api/channels/${id}`), {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
+      [CHANNEL_PASSWORD_HEADER]: password,
     },
     body: JSON.stringify({ text, files }),
   });
 
   if (response.status === 404) {
     throw new Error("channel not found");
+  }
+
+  if (response.status === 401) {
+    throw new Error("invalid channel password");
   }
 
   if (!response.ok) {

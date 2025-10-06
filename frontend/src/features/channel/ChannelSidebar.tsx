@@ -6,9 +6,13 @@ import { Label } from "@/components/ui/label";
 interface ChannelSidebarProps {
   channelInput: string;
   onChannelInputChange: (value: string) => void;
+  channelPassword: string | null;
+  channelPasswordInput: string;
+  onChannelPasswordChange: (value: string) => void;
   onJoinChannel: () => void;
   onCreateChannel: () => void;
   onCopyLink: () => void;
+  onCopyPassword: () => void;
   channelLink: string | null;
   status: string;
   ttlLabel: string;
@@ -19,9 +23,13 @@ interface ChannelSidebarProps {
 export function ChannelSidebar({
   channelInput,
   onChannelInputChange,
+  channelPassword,
+  channelPasswordInput,
+  onChannelPasswordChange,
   onJoinChannel,
   onCreateChannel,
   onCopyLink,
+  onCopyPassword,
   channelLink,
   status,
   ttlLabel,
@@ -46,12 +54,28 @@ export function ChannelSidebar({
             autoCapitalize="off"
             autoComplete="off"
           />
+          <Label htmlFor="channel-password">Channel password</Label>
+          <Input
+            id="channel-password"
+            placeholder="top-secret"
+            value={channelPasswordInput}
+            onChange={(event) => onChannelPasswordChange(event.target.value)}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoComplete="off"
+          />
+          <p className="text-xs text-muted-foreground">Required once per session to access a channel.</p>
           <Button onClick={onJoinChannel} className="w-full" variant="secondary">
             Attach to channel
           </Button>
           {channelLink ? (
             <Button type="button" variant="ghost" className="w-full" onClick={onCopyLink}>
               Copy shareable link
+            </Button>
+          ) : null}
+          {channelPassword ? (
+            <Button type="button" variant="ghost" className="w-full" onClick={onCopyPassword}>
+              Copy channel password
             </Button>
           ) : null}
         </div>
@@ -68,6 +92,12 @@ export function ChannelSidebar({
           <div className="mt-2 flex items-center justify-between font-mono text-[0.75rem] uppercase">
             <span>TTL</span>
             <span>{ttlLabel}</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between font-mono text-[0.75rem] uppercase">
+            <span>Password</span>
+            <span className="truncate" title={channelPassword ?? undefined}>
+              {channelPassword ?? "--"}
+            </span>
           </div>
         </div>
         {error ? <p className="text-xs font-semibold text-destructive">{error}</p> : null}

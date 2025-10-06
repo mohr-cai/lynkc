@@ -9,35 +9,74 @@ import { formatBytes } from "@/lib/files";
 interface RemotePanelProps {
   remoteContent: string;
   remoteFiles: ChannelFile[];
+  isLocked: boolean;
   onCopyRemote: () => void;
   onCopyFile: (file: ChannelFile) => Promise<void>;
   onDownloadFile: (file: ChannelFile) => void;
 }
 
-export function RemotePanel({ remoteContent, remoteFiles, onCopyRemote, onCopyFile, onDownloadFile }: RemotePanelProps) {
+export function RemotePanel({
+  remoteContent,
+  remoteFiles,
+  isLocked,
+  onCopyRemote,
+  onCopyFile,
+  onDownloadFile,
+}: RemotePanelProps) {
+  const placeholderContent = "████████████████\nchannel locked (password required)";
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <Label htmlFor="remote" className="flex items-center gap-2">
           Remote view
         </Label>
-        <Button type="button" size="sm" variant="ghost" onClick={onCopyRemote} disabled={!remoteContent}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={onCopyRemote}
+          disabled={isLocked || !remoteContent}
+        >
           <Copy className="mr-2 h-4 w-4" /> copy text
         </Button>
       </div>
-      <Textarea
-        id="remote"
-        spellCheck={false}
-        readOnly
-        value={remoteContent}
-        className="min-h-[220px] bg-background/40 font-mono"
-      />
+      <div className="relative">
+        <Textarea
+          id="remote"
+          spellCheck={false}
+          readOnly
+          value={isLocked ? placeholderContent : remoteContent}
+          className="min-h-[220px] bg-background/40 font-mono"
+        />
+        {isLocked ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
+            Password required to unlock remote view
+          </div>
+        ) : null}
+      </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Paperclip className="h-4 w-4 text-primary" /> Remote attachments
         </div>
-        <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
-          {remoteFiles.length === 0 ? (
+        <div className="relative space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
+          {isLocked ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">redacted.txt</span>
+                <span className="text-muted-foreground">••• KB</span>
+                <div className="ml-auto flex items-center gap-1 opacity-50">
+                  <Button type="button" size="icon" variant="ghost" disabled title="Copy disabled">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" disabled title="Download disabled">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-muted-foreground">Unlock with channel password to view real attachments.</p>
+            </div>
+          ) : remoteFiles.length === 0 ? (
             <p className="text-muted-foreground">No remote files in this channel.</p>
           ) : (
             <ul className="space-y-2">

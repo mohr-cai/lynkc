@@ -29,9 +29,13 @@ export function ChannelShell() {
         <ChannelSidebar
           channelInput={controller.channelInput}
           onChannelInputChange={controller.setChannelInput}
+          channelPassword={controller.channelPassword}
+          channelPasswordInput={controller.channelPasswordInput}
+          onChannelPasswordChange={controller.setChannelPasswordInput}
           onJoinChannel={controller.handleJoinChannel}
           onCreateChannel={controller.handleCreateChannel}
           onCopyLink={controller.handleCopyChannelLink}
+          onCopyPassword={controller.handleCopyChannelPassword}
           channelLink={controller.channelLink}
           status={controller.status}
           ttlLabel={controller.ttlLabel}
@@ -48,9 +52,16 @@ export function ChannelShell() {
               </CardDescription>
             </div>
             {controller.channelId ? (
-              <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-mono text-muted-foreground">
-                {controller.channelId}
-              </span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-mono text-muted-foreground">
+                  id: {controller.channelId}
+                </span>
+                {controller.channelPassword ? (
+                  <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-mono text-muted-foreground">
+                    pw: {controller.channelPassword}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
@@ -76,6 +87,7 @@ export function ChannelShell() {
             <RemotePanel
               remoteContent={controller.remoteContent}
               remoteFiles={controller.remoteFiles}
+              isLocked={controller.requiresPassword}
               onCopyRemote={controller.handleCopyRemote}
               onCopyFile={controller.handleCopyFile}
               onDownloadFile={controller.handleDownloadFile}

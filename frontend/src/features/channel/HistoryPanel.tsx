@@ -86,7 +86,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
                   <button
                     type="button"
                     onClick={() => onSelectEntry(entry.id)}
-                    className="w-full rounded-md border border-border/60 bg-background/70 p-3 text-left transition hover:border-primary/70 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    className="w-full break-words rounded-md border border-border/60 bg-background/70 p-3 text-left transition hover:border-primary/70 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/60"
                   >
                     <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-wide text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
@@ -101,7 +101,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
                     </div>
                     <div className="mt-2 text-sm">
                       {preview ? (
-                        <p className="text-foreground">{preview}</p>
+                        <p className="max-h-24 overflow-hidden break-words text-foreground">{preview}</p>
                       ) : (
                         <p className="text-muted-foreground">Remote text was empty.</p>
                       )}

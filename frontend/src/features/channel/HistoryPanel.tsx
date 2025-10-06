@@ -55,20 +55,20 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
   }, [entries.length]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-full flex-col gap-3">
       <div className="space-y-1">
         <Label className="flex items-center gap-2">
           <HistoryIcon className="h-4 w-4 text-primary" /> Channel history
         </Label>
         <p className="text-xs text-muted-foreground">Snapshots sync to your session and vanish when the channel expires.</p>
       </div>
-      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3">
+      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm max-h-[28rem] overflow-y-auto">
         {isLocked ? (
-          <p className="text-sm text-muted-foreground">Unlock the channel with its password to capture history again.</p>
+          <p className="text-muted-foreground">Unlock the channel with its password to capture history again.</p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No snapshots yet. Once remote content arrives we will keep it here.</p>
+          <p className="text-muted-foreground">No snapshots yet. Once remote content arrives we will keep it here.</p>
         ) : (
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-2">
             {entries.map((entry) => {
               const trimmed = entry.text.trim();
               const hasText = trimmed.length > 0;

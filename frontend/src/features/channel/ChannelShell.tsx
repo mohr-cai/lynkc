@@ -11,7 +11,7 @@ export function ChannelShell() {
   const controller = useChannelController();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-10 md:px-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-10 md:px-10">
       <header className="flex flex-col gap-2">
         <div className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
           <PlugZap className="h-4 w-4 text-primary" />
@@ -53,7 +53,7 @@ export function ChannelShell() {
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.1fr)] lg:gap-8">
             <ChannelPad
               localContent={controller.localContent}
               onLocalContentChange={controller.setLocalContent}
@@ -81,11 +81,13 @@ export function ChannelShell() {
               onCopyFile={controller.handleCopyFile}
               onDownloadFile={controller.handleDownloadFile}
             />
-            <HistoryPanel
-              entries={controller.history}
-              isLocked={controller.requiresPassword}
-              onSelectEntry={controller.handleApplyHistoryEntry}
-            />
+            <div className="md:col-span-2 lg:col-span-1">
+              <HistoryPanel
+                entries={controller.history}
+                isLocked={controller.requiresPassword}
+                onSelectEntry={controller.handleApplyHistoryEntry}
+              />
+            </div>
           </CardContent>
         </Card>
       </section>

@@ -13,14 +13,14 @@ use redis::{aio::ConnectionManager, AsyncCommands};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::net::TcpListener;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
 use tracing::{info, instrument};
 use uuid::Uuid;
 
 const DEFAULT_CHANNEL_TTL_SECONDS: u64 = 900; // 15 minutes
 const CHANNEL_KEY_PREFIX: &str = "channel:";
 const MAX_CHANNEL_BYTES: usize = 100 * 1024 * 1024; // 100 MiB limit for text + files
-const MAX_REQUEST_BYTES: usize = 200 * 1024 * 1024; // allow for base64 expansion
+const MAX_REQUEST_BYTES: u64 = 200 * 1024 * 1024; // allow for base64 expansion
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ChannelFile {
@@ -207,7 +207,8 @@ pub async fn run() -> Result<(), AppError> {
                 .allow_origin(tower_http::cors::Any)
                 .allow_headers(tower_http::cors::Any),
         )
-        .layer(DefaultBodyLimit::max(MAX_REQUEST_BYTES))
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(MAX_REQUEST_BYTES))
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state.clone());
 

@@ -30,7 +30,7 @@ pub fn generate_channel_id() -> String {
 }
 
 pub fn validate_channel_data(data: &ChannelData) -> Result<(), AppError> {
-    let mut total = data.text.as_bytes().len();
+    let mut total = data.text.len();
     for file in &data.files {
         let decoded = BASE64_ENGINE
             .decode(&file.data_base64)

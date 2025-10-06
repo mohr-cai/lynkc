@@ -20,7 +20,7 @@ export function ChannelShell() {
         </div>
         <h1 className="text-4xl font-semibold leading-tight md:text-5xl">copy:paste via https</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          rust based secure clipboard. secure sync, no long time memory.
+          rust based secure clipboard. near-time sync, short time memory.
         </p>
       </header>
 

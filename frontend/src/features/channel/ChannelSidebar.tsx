@@ -40,7 +40,7 @@ export function ChannelSidebar({
     <Card>
       <CardHeader>
         <CardTitle>Channel ops</CardTitle>
-        <CardDescription>Spin up a TLS 1.3 channel backed by Redis Streams, or join an existing shard.</CardDescription>
+        <CardDescription>TLS channel on Redis. Join or mint new.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
@@ -49,7 +49,7 @@ export function ChannelSidebar({
               <Label htmlFor="channel-id">Channel ID</Label>
               <Input
                 id="channel-id"
-                placeholder="channel-uuid"
+                placeholder="channel-id"
                 value={channelInput}
                 onChange={(event) => onChannelInputChange(event.target.value)}
                 spellCheck={false}
@@ -61,7 +61,7 @@ export function ChannelSidebar({
               <Label htmlFor="channel-password">Channel PSK</Label>
               <Input
                 id="channel-password"
-                placeholder="PSK-or-token"
+                placeholder="psk"
                 value={channelPasswordInput}
                 onChange={(event) => onChannelPasswordChange(event.target.value)}
                 spellCheck={false}
@@ -69,9 +69,7 @@ export function ChannelSidebar({
                 autoComplete="off"
               />
             </div>
-            <p className="text-xs text-muted-foreground sm:col-span-2">
-              Present the pre-shared key once per session to unwrap the encrypted stream.
-            </p>
+            <p className="text-xs text-muted-foreground sm:col-span-2">Supply the PSK once per session.</p>
           </div>
           <Button onClick={onJoinChannel} className="w-full" variant="secondary">
             Attach to channel
@@ -102,7 +100,7 @@ export function ChannelSidebar({
             <span>{ttlLabel}</span>
           </div>
           <div className="mt-2 flex items-center justify-between font-mono text-[0.75rem] uppercase">
-            <span>Password</span>
+            <span>PSK</span>
             <span className="truncate" title={channelPassword ?? undefined}>
               {channelPassword ?? "--"}
             </span>

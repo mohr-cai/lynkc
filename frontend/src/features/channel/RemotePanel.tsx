@@ -23,7 +23,7 @@ export function RemotePanel({
   onCopyFile,
   onDownloadFile,
 }: RemotePanelProps) {
-  const placeholderContent = "████████████████\nchannel locked (PSK required)";
+  const placeholderContent = "████████████████\nchannel locked (PSK)";
 
   return (
     <div className="flex flex-col gap-3">
@@ -52,7 +52,7 @@ export function RemotePanel({
           />
           {isLocked ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
-              Channel PSK required to decrypt remote buffer
+              Unlock with channel PSK
             </div>
           ) : null}
         </div>
@@ -76,7 +76,7 @@ export function RemotePanel({
                   </Button>
                 </div>
               </div>
-              <p className="text-muted-foreground">Unlock with the channel PSK to inspect real artifacts.</p>
+              <p className="text-muted-foreground">Unlock with the channel PSK to see real artifacts.</p>
             </div>
           ) : remoteFiles.length === 0 ? (
             <p className="text-muted-foreground">No remote artifacts in this channel.</p>

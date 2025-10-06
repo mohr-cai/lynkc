@@ -18,10 +18,9 @@ export function ChannelShell() {
           <PlugZap className="h-4 w-4 text-primary" />
           LYNKC
         </div>
-        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Clipboard relays over TLS 1.3 + Redis Streams</h1>
+        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Copy/paste via browser</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Pipe your clipboard straight into a Rust/Tokio control plane. TLS 1.3 keeps the payload opaque, Redis Streams
-          fans it out in real-time, and nothing ever touches disk.
+          Rust + Redis behind TLS. Instant sync, zero disk, done.
         </p>
       </header>
 
@@ -47,9 +46,7 @@ export function ChannelShell() {
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/60">
             <div>
               <CardTitle>Clipboard pad</CardTitle>
-              <CardDescription>
-                Draft locally, and LYNKC diff-syncs it through the encrypted channel. Remote buffer pulses every 2s.
-              </CardDescription>
+              <CardDescription>Draft locally; encrypted sync ticks every 2s.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1.85fr)] lg:gap-10">

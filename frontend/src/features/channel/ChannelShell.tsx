@@ -18,9 +18,9 @@ export function ChannelShell() {
           <PlugZap className="h-4 w-4 text-primary" />
           LYNKC
         </div>
-        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Copy/paste via browser</h1>
+        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">copy:paste via https</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Rust backed. Instant sync, zero disk.
+          rust based secure clipboard. secure sync, no long time memory.
         </p>
       </header>
 

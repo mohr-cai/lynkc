@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Download, Paperclip, PlugZap, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ChannelFile,
-  createChannel,
-  fetchChannel,
-  updateChannel,
-} from "@/lib/api";
-import { base64ToBlob, formatBytes } from "@/lib/utils";
+import { ChannelFile, createChannel, fetchChannel, updateChannel } from "@/lib/api";
+import { base64ToBlob, cn, formatBytes } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_CHANNEL_BYTES = 100 * 1024 * 1024; // keep in sync with backend limit
@@ -55,6 +50,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textEncoder = useMemo(() => new TextEncoder(), []);
   const computeBytes = useCallback(
@@ -80,8 +76,41 @@ export function App() {
     [computeBytes]
   );
 
-  const bytesUsed = useMemo(() => computeBytes(localContent, localFiles), [computeBytes, localContent, localFiles]);
+  const processIncomingFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length) {
+        return;
+      }
 
+      try {
+        setError(null);
+        const processed = await Promise.all(files.map(readFileAsChannelFile));
+        let accepted = false;
+        setLocalFiles((prev) => {
+          const next = [...prev, ...processed];
+          if (!enforceLimit(localContent, next)) {
+            return prev;
+          }
+          accepted = true;
+          return next;
+        });
+
+        if (accepted) {
+          setStatus(
+            processed.length === 1
+              ? `attached ${processed[0].name}`
+              : `attached ${processed.length} files`
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        setError("failed to read file");
+      }
+    },
+    [enforceLimit, localContent]
+  );
+
+  const bytesUsed = useMemo(() => computeBytes(localContent, localFiles), [computeBytes, localContent, localFiles]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -135,6 +164,16 @@ export function App() {
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", next);
   }, []);
+
+  const channelLink = useMemo(() => {
+    if (!channelId || typeof window === "undefined") {
+      return null;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("channel", channelId);
+    return url.toString();
+  }, [channelId]);
 
   const handleCreateChannel = useCallback(async () => {
     setError(null);
@@ -253,31 +292,76 @@ export function App() {
     setStatus(`downloaded ${file.name}`);
   }, []);
 
-  const handleFileSelect = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files ? Array.from(event.target.files) : [];
-    if (!files.length) {
+  const handleCopyChannelLink = useCallback(async () => {
+    if (!channelLink) {
+      setError("no channel yet");
       return;
     }
 
     try {
-      setError(null);
-      const processed = await Promise.all(files.map(readFileAsChannelFile));
-      const nextFiles = [...localFiles, ...processed];
-      if (!enforceLimit(localContent, nextFiles)) {
-        return;
-      }
-      setLocalFiles(nextFiles);
+      await navigator.clipboard.writeText(channelLink);
+      setStatus("channel link copied");
     } catch (err) {
       console.error(err);
-      setError("failed to read file");
-    } finally {
-      event.target.value = "";
+      setError("could not copy link (needs HTTPS)");
     }
-  }, [enforceLimit, localContent, localFiles]);
+  }, [channelLink]);
+
+  const handleFileSelect = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files ? Array.from(event.target.files) : [];
+      if (!files.length) {
+        return;
+      }
+
+      await processIncomingFiles(files);
+      event.target.value = "";
+    },
+    [processIncomingFiles]
+  );
 
   const handleRemoveLocalFile = useCallback((id: string) => {
     setLocalFiles((prev) => prev.filter((file) => file.id !== id));
   }, []);
+
+  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    async (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDragging(false);
+      const files = event.dataTransfer ? Array.from(event.dataTransfer.files) : [];
+      if (!files.length) {
+        return;
+      }
+
+      await processIncomingFiles(files);
+    },
+    [processIncomingFiles]
+  );
+
+  useEffect(() => {
+    const handleWindowPaste = (event: ClipboardEvent) => {
+      const files = event.clipboardData ? Array.from(event.clipboardData.files) : [];
+      if (files.length) {
+        processIncomingFiles(files);
+      }
+    };
+
+    window.addEventListener("paste", handleWindowPaste);
+    return () => window.removeEventListener("paste", handleWindowPaste);
+  }, [processIncomingFiles]);
 
   const ttlLabel = useMemo(() => {
     if (ttlSeconds === null) return "--";
@@ -326,6 +410,11 @@ export function App() {
               <Button onClick={handleJoinChannel} className="w-full" variant="secondary">
                 Attach to channel
               </Button>
+              {channelLink ? (
+                <Button type="button" variant="ghost" className="w-full" onClick={handleCopyChannelLink}>
+                  Copy shareable link
+                </Button>
+              ) : null}
             </div>
             <div className="space-y-2 pt-2">
               <Button onClick={handleCreateChannel} disabled={isCreating} className="w-full">
@@ -398,9 +487,20 @@ export function App() {
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
+                <div
+                  onDragEnter={handleDragOver}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs transition-colors",
+                    isDragging && "border-primary bg-primary/10 text-primary"
+                  )}
+                >
                   {localFiles.length === 0 ? (
-                    <p className="text-muted-foreground">No local files yet.</p>
+                    <p className="text-muted-foreground">
+                      Drop files here, paste from clipboard, or use the button.
+                    </p>
                   ) : (
                     <ul className="space-y-2">
                       {localFiles.map((file) => (
@@ -409,15 +509,35 @@ export function App() {
                             <span className="truncate font-medium">{file.name}</span>
                             <span className="text-muted-foreground">{formatBytes(file.size)}</span>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveLocalFile(file.id)}
-                            title="Remove file"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleCopyFile(file)}
+                              title="Copy to clipboard"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDownloadFile(file)}
+                              title="Download file"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveLocalFile(file.id)}
+                              title="Remove file"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </li>
                       ))}
                     </ul>

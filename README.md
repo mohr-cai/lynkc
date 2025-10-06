@@ -1,34 +1,63 @@
 # lynkc
 
-lynkc is your copy-paste web application that syncs your clipboard via the browser, built as a minimal monorepo with a Rust backend, Redis cache, and React/Next.js frontend.
+> **Clipboard tunnels for cursed infra moments.** When the vm eats your shortcuts, lynkc sneaks bytes through the browser.
 
-## Architecture
+## Why
 
-- `backend/`: Rust + Axum web server exposing ephemeral channel REST API backed by Redis. Stateless containers; channel payloads expire automatically.
-- `frontend/`: Vite-powered React + shadcn/ui interface for creating/joining channels and sharing clipboard text in real time via polling.
-- `docker-compose.yml`: Local orchestration of the backend API and Redis cache.
+- Copy/paste into remote shells, air-gapped boxes, or throwaway VMs without trusting extra tooling.
+- Spin up a channel, drop text or whole files (up to ~100 MB), share the ID, and everyone stays in sync.
+- Nothing hits disk: payloads live in Redis with a sliding TTL, vanish when idle, and containers stay stateless.
+
+## Stack Snapshot
+
+| Layer      | What we use | Why it fits |
+|------------|-------------|-------------|
+| Web API    | Rust + Axum | Lean async server, predictable perf, native Redis client |
+| Cache      | Redis       | Ephemeral key/value, TTL per channel, zero persistence |
+| Frontend   | Vite + React + shadcn/ui | Minimal build, solid DX, dark-mode vibes |
+| Runtime    | Docker (optional) | One-liner spin-up for backend + Redis |
 
 ## Flow
 
-1. Client creates or joins a channel ID via the frontend.
-2. Frontend stores and retrieves channel text and file attachments via backend REST calls.
-3. Backend stores channel payloads in Redis with TTL and serves them to all participants without persisting to disk.
+1. Hit the UI, mash “Generate brand new” or punch in a channel ID, then copy the share link for your unlucky teammate.
+2. Type or drop files; lynkc snapshots the payload, base64s attachments, and ships it to the backend.
+3. Everyone polling the same ID sees updates instantly; TTL refreshes on read/write and disappears when quiet.
 
-## Development
+## Run It
 
-- Backend: `cargo run` in `backend/` (requires Redis).
-- Frontend: `npm run dev` in `frontend/`.
-- Backend stack (API + Redis): `docker compose up`.
+### Quickstart (Docker)
+```bash
+cp .env.example .env
+# tweak ports/redis uri as needed
 
-## Configuration
+docker compose up --build
+```
+Backend boots on `${BACKEND_HOST}:${BACKEND_PORT}` (default `0.0.0.0:8080`), Redis on `${REDIS_PORT}`.
 
-Copy `.env.example` to `.env` and tweak the values for your deployment targets.
+### Bare-metal dev
+```bash
+# backend
+cd backend
+cp .env.example .env   # optional overrides
+cargo run
 
-- Backend honours `HOST`/`PORT` (or a combined `BIND_ADDRESS`) plus Redis/TTL values.
-- Frontend uses `VITE_API_BASE_URL` during builds to wire API calls.
-- Attachments are base64-encoded and capped at roughly ~100 MiB per channel (text + files).
-- Docker Compose consumes the same `.env` file so container ports stay in sync with the binaries.
+# frontend
+cd ../frontend
+cp .env.example .env.local   # set VITE_API_BASE_URL if backend isn’t localhost
+npm install
+npm run dev
+```
+Build the static site with `npm run build`; serve `frontend/dist/` using whatever Nginx/Caddy you already trust.
 
-To run locally without Docker, you can place service-specific overrides in `backend/.env` and `frontend/.env.local`.
+## Env knobs
 
-For production you can build the React app on your deployment target with `npm run build` and serve the generated `frontend/dist/` directory using your platform Nginx (no frontend container is provided).
+- `HOST` / `PORT` (or `BIND_ADDRESS`) – listen address for the API.
+- `REDIS_URL` – upstream cache; should point at something with persistence disabled.
+- `CHANNEL_TTL_SECONDS` – default 900 (15 min). Every fetch resets the clock.
+- Frontend uses `VITE_API_BASE_URL` at build time so the browser hits the right API origin.
+
+All payloads are capped at ~100 MB (text + attachments). Oversize requests get a `400 PayloadTooLarge` with nothing stored.
+
+---
+
+Bring your own HTTPS termination if you want clipboard APIs to behave on remote machines.

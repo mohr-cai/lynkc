@@ -6,7 +6,7 @@ lynkc is your copy-paste web application that syncs your clipboard via the brows
 
 - `backend/`: Rust + Axum web server exposing ephemeral channel REST API backed by Redis. Stateless containers; channel payloads expire automatically.
 - `frontend/`: Next.js + React + shadcn/ui interface for creating/joining channels and sharing clipboard text in real time via polling.
-- `docker-compose.yml`: Local orchestration of web server, Redis, and frontend. Backend container exposes HTTP API; frontend proxies requests during development.
+- `docker-compose.yml`: Local orchestration of the backend API and Redis cache.
 
 ## Flow
 
@@ -18,7 +18,7 @@ lynkc is your copy-paste web application that syncs your clipboard via the brows
 
 - Backend: `cargo run` in `backend/` (requires Redis).
 - Frontend: `pnpm dev` in `frontend/`.
-- Both services: `docker compose up`.
+- Backend stack (API + Redis): `docker compose up`.
 
 ## Configuration
 
@@ -29,3 +29,5 @@ Copy `.env.example` to `.env` and tweak the values for your deployment targets.
 - Docker Compose consumes the same `.env` file so container ports stay in sync with the binaries.
 
 To run locally without Docker, you can place service-specific overrides in `backend/.env` and `frontend/.env.local`.
+
+For production you can build the React app on your deployment target with `npm run build` and serve the generated `frontend/dist/` directory using your platform Nginx (no frontend container is provided).

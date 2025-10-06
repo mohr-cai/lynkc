@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use redis::AsyncCommands;
@@ -9,12 +9,15 @@ use tracing::instrument;
 
 use crate::{
     channel::{
-        deserialize_channel, generate_channel_id, serialize_channel, validate_channel_data,
-        ChannelData, ChannelFile,
+        deserialize_channel, generate_channel_id, generate_channel_password, hash_channel_password,
+        serialize_channel, validate_channel_data, verify_channel_password, ChannelData, ChannelFile,
+        StoredChannel,
     },
     error::AppError,
     state::{refresh_ttl, SharedState},
 };
+
+const CHANNEL_PASSWORD_HEADER: &str = "x-channel-password";
 
 #[instrument(skip_all)]
 pub async fn health_check() -> &'static str {
@@ -32,6 +35,7 @@ pub struct CreateChannelRequest {
 #[derive(Serialize)]
 pub struct CreateChannelResponse {
     pub id: String,
+    pub password: String,
     pub ttl_seconds: u64,
 }
 
@@ -62,7 +66,13 @@ pub async fn create_channel(
     };
 
     validate_channel_data(&data)?;
-    let serialized = serialize_channel(&data)?;
+    let password = generate_channel_password();
+    let password_hash = hash_channel_password(&password);
+    let record = StoredChannel {
+        password_hash: Some(password_hash),
+        data,
+    };
+    let serialized = serialize_channel(&record)?;
 
     let key = state.channel_key(&id);
     let mut conn = state.redis();
@@ -72,6 +82,7 @@ pub async fn create_channel(
         StatusCode::CREATED,
         Json(CreateChannelResponse {
             id,
+            password,
             ttl_seconds: state.channel_ttl().as_secs(),
         }),
     ))
@@ -81,7 +92,13 @@ pub async fn create_channel(
 pub async fn fetch_channel(
     Path(id): Path<String>,
     State(state): State<SharedState>,
+    headers: HeaderMap,
 ) -> Result<Json<ChannelPayloadResponse>, AppError> {
+    let provided_password = headers
+        .get(CHANNEL_PASSWORD_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+
     let key = state.channel_key(&id);
     let mut conn = state.redis();
 
@@ -90,7 +107,12 @@ pub async fn fetch_channel(
         return Err(AppError::ChannelNotFound);
     };
 
-    let data = deserialize_channel(raw);
+    let record = deserialize_channel(raw);
+    if !verify_channel_password(record.password_hash.as_deref(), provided_password.as_deref()) {
+        return Err(AppError::InvalidChannelPassword);
+    }
+
+    let data = record.data;
 
     let ttl_seconds = conn
         .ttl(&key)
@@ -107,18 +129,28 @@ pub async fn fetch_channel(
     }))
 }
 
-#[instrument(level = "debug", skip(state, payload))]
+#[instrument(level = "debug", skip(state, payload, headers))]
 pub async fn update_channel(
     Path(id): Path<String>,
+    headers: HeaderMap,
     State(state): State<SharedState>,
     Json(payload): Json<UpdateChannelRequest>,
 ) -> Result<StatusCode, AppError> {
+    let provided_password = headers
+        .get(CHANNEL_PASSWORD_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+
     let key = state.channel_key(&id);
     let mut conn = state.redis();
 
-    let exists: bool = conn.exists(&key).await?;
-    if !exists {
+    let raw: Option<String> = conn.get(&key).await?;
+    let Some(raw) = raw else {
         return Err(AppError::ChannelNotFound);
+    };
+    let mut record = deserialize_channel(raw);
+    if !verify_channel_password(record.password_hash.as_deref(), provided_password.as_deref()) {
+        return Err(AppError::InvalidChannelPassword);
     }
 
     let data = ChannelData {
@@ -127,7 +159,8 @@ pub async fn update_channel(
     };
 
     validate_channel_data(&data)?;
-    let serialized = serialize_channel(&data)?;
+    record.data = data;
+    let serialized = serialize_channel(&record)?;
 
     let _: () = conn.set_ex(&key, serialized, state.ttl_seconds()).await?;
 

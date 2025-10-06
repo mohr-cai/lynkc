@@ -13,6 +13,8 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("channel not found")]
     ChannelNotFound,
+    #[error("invalid channel password")]
+    InvalidChannelPassword,
     #[error("channel payload exceeds allowed size")]
     PayloadTooLarge,
     #[error("invalid file data encoding")]
@@ -26,6 +28,7 @@ impl IntoResponse for AppError {
         tracing::error!(error = ?self, "request failed");
         let status = match self {
             AppError::ChannelNotFound => StatusCode::NOT_FOUND,
+            AppError::InvalidChannelPassword => StatusCode::UNAUTHORIZED,
             AppError::PayloadTooLarge | AppError::InvalidFileData => StatusCode::BAD_REQUEST,
             AppError::BindAddress(_)
             | AppError::Redis(_)

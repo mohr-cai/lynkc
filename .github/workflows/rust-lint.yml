@@ -3,12 +3,12 @@ name: Rust Lint
 on:
   push:
     paths:
-      - 'backend/**'
-      - '.github/workflows/rust-lint.yml'
+      - "backend/**"
+      - ".github/workflows/rust-lint.yml"
   pull_request:
     paths:
-      - 'backend/**'
-      - '.github/workflows/rust-lint.yml'
+      - "backend/**"
+      - ".github/workflows/rust-lint.yml"
 
 jobs:
   lint:

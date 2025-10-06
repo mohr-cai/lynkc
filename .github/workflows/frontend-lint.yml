@@ -3,12 +3,12 @@ name: Frontend Lint
 on:
   push:
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-lint.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-lint.yml"
   pull_request:
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-lint.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-lint.yml"
 
 jobs:
   lint:
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm install

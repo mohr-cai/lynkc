@@ -7,6 +7,8 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use base64::engine::general_purpose::STANDARD as BASE64_ENGINE;
+use base64::Engine;
 use redis::{aio::ConnectionManager, AsyncCommands};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -17,6 +19,26 @@ use uuid::Uuid;
 
 const DEFAULT_CHANNEL_TTL_SECONDS: u64 = 900; // 15 minutes
 const CHANNEL_KEY_PREFIX: &str = "channel:";
+const MAX_CHANNEL_BYTES: usize = 100 * 1024 * 1024; // 100 MiB limit for text + files
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ChannelFile {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "mime_type")]
+    pub mime_type: String,
+    pub size: u64,
+    #[serde(rename = "data_base64")]
+    pub data_base64: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ChannelData {
+    #[serde(default)]
+    pub text: String,
+    #[serde(default)]
+    pub files: Vec<ChannelFile>,
+}
 
 pub struct AppState {
     redis: ConnectionManager,
@@ -88,7 +110,9 @@ impl AppConfig {
 #[derive(Deserialize, Default)]
 pub struct CreateChannelRequest {
     #[serde(default)]
-    initial_content: Option<String>,
+    text: Option<String>,
+    #[serde(default)]
+    files: Vec<ChannelFile>,
 }
 
 #[derive(Serialize)]
@@ -100,13 +124,16 @@ pub struct CreateChannelResponse {
 #[derive(Serialize)]
 pub struct ChannelPayloadResponse {
     id: String,
-    content: String,
+    text: String,
+    files: Vec<ChannelFile>,
     ttl_seconds: i64,
 }
 
 #[derive(Deserialize)]
 pub struct UpdateChannelRequest {
-    content: String,
+    text: String,
+    #[serde(default)]
+    files: Vec<ChannelFile>,
 }
 
 #[derive(Error, Debug)]
@@ -119,6 +146,12 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("channel not found")]
     ChannelNotFound,
+    #[error("channel payload exceeds allowed size")]
+    PayloadTooLarge,
+    #[error("invalid file data encoding")]
+    InvalidFileData,
+    #[error("serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
 }
 
 impl IntoResponse for AppError {
@@ -126,7 +159,10 @@ impl IntoResponse for AppError {
         tracing::error!(error = ?self, "request failed");
         let status = match self {
             AppError::ChannelNotFound => StatusCode::NOT_FOUND,
-            AppError::BindAddress(_) | AppError::Redis(_) | AppError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::PayloadTooLarge | AppError::InvalidFileData => StatusCode::BAD_REQUEST,
+            AppError::BindAddress(_) | AppError::Redis(_) | AppError::Io(_) | AppError::Serialization(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         };
 
         (status, Json(ErrorResponse::from(self))).into_response()
@@ -181,6 +217,35 @@ pub async fn run() -> Result<(), AppError> {
     Ok(())
 }
 
+fn validate_channel_data(data: &ChannelData) -> Result<(), AppError> {
+    let mut total = data.text.as_bytes().len();
+    for file in &data.files {
+        let decoded = BASE64_ENGINE
+            .decode(&file.data_base64)
+            .map_err(|_| AppError::InvalidFileData)?;
+        total = total
+            .checked_add(decoded.len())
+            .ok_or(AppError::PayloadTooLarge)?;
+    }
+
+    if total > MAX_CHANNEL_BYTES {
+        return Err(AppError::PayloadTooLarge);
+    }
+
+    Ok(())
+}
+
+fn deserialize_channel(raw: String) -> ChannelData {
+    serde_json::from_str(&raw).unwrap_or_else(|_| ChannelData {
+        text: raw,
+        files: Vec::new(),
+    })
+}
+
+fn serialize_channel(data: &ChannelData) -> Result<String, AppError> {
+    Ok(serde_json::to_string(data)?)
+}
+
 fn init_tracing() {
     static INIT: std::sync::Once = std::sync::Once::new();
     INIT.call_once(|| {
@@ -203,11 +268,17 @@ async fn create_channel(
     Json(payload): Json<CreateChannelRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let id = generate_channel_id();
-    let content = payload.initial_content.unwrap_or_default();
+    let data = ChannelData {
+        text: payload.text.unwrap_or_default(),
+        files: payload.files,
+    };
+    validate_channel_data(&data)?;
+    let serialized = serialize_channel(&data)?;
+
     let key = state.channel_key(&id);
 
     let mut conn = state.redis();
-    let _: () = conn.set_ex(&key, content, state.ttl_seconds()).await?;
+    let _: () = conn.set_ex(&key, serialized, state.ttl_seconds()).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -226,10 +297,12 @@ async fn fetch_channel(
     let key = state.channel_key(&id);
     let mut conn = state.redis();
 
-    let content: Option<String> = conn.get(&key).await?;
-    let Some(content) = content else {
+    let raw: Option<String> = conn.get(&key).await?;
+    let Some(raw) = raw else {
         return Err(AppError::ChannelNotFound);
     };
+
+    let data = deserialize_channel(raw);
 
     let ttl_seconds = conn.ttl(&key).await.unwrap_or(state.channel_ttl.as_secs() as i64);
     let ttl_seconds = if ttl_seconds < 0 {
@@ -243,7 +316,8 @@ async fn fetch_channel(
 
     Ok(Json(ChannelPayloadResponse {
         id,
-        content,
+        text: data.text,
+        files: data.files,
         ttl_seconds,
     }))
 }
@@ -262,7 +336,14 @@ async fn update_channel(
         return Err(AppError::ChannelNotFound);
     }
 
-    let _: () = conn.set_ex(&key, payload.content, state.ttl_seconds()).await?;
+    let data = ChannelData {
+        text: payload.text,
+        files: payload.files,
+    };
+    validate_channel_data(&data)?;
+    let serialized = serialize_channel(&data)?;
+
+    let _: () = conn.set_ex(&key, serialized, state.ttl_seconds()).await?;
 
     Ok((StatusCode::NO_CONTENT, ()))
 }

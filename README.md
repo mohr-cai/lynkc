@@ -19,3 +19,13 @@ lynkc is your copy-paste web application that syncs your clipboard via the brows
 - Backend: `cargo run` in `backend/` (requires Redis).
 - Frontend: `pnpm dev` in `frontend/`.
 - Both services: `docker compose up`.
+
+## Configuration
+
+Copy `.env.example` to `.env` and tweak the values for your deployment targets.
+
+- Backend honours `HOST`/`PORT` (or a combined `BIND_ADDRESS`) plus Redis/TTL values.
+- Frontend uses `NEXT_PUBLIC_API_BASE_URL` during builds to wire API calls.
+- Docker Compose consumes the same `.env` file so container ports stay in sync with the binaries.
+
+To run locally without Docker, you can place service-specific overrides in `backend/.env` and `frontend/.env.local`.

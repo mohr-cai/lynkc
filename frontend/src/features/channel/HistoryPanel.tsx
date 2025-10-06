@@ -3,6 +3,7 @@ import { Clock, History as HistoryIcon, Paperclip } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { formatBytes } from "@/lib/files";
+import { cn } from "@/lib/utils";
 
 import { ChannelHistoryEntry } from "./hooks";
 
@@ -80,6 +81,10 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
               const secondsRemaining = entry.expiresAt ? Math.max(0, Math.round((entry.expiresAt - now) / 1000)) : null;
               const expiresLabel = secondsRemaining === null ? null : formatDuration(secondsRemaining);
               const isExpiringSoon = typeof secondsRemaining === "number" && secondsRemaining > 0 && secondsRemaining <= 30;
+              const ttlClasses = cn(
+                "inline-flex items-center gap-1 rounded-full bg-primary/5 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-primary/80",
+                isExpiringSoon && "text-destructive"
+              );
 
               return (
                 <li key={entry.id}>
@@ -93,11 +98,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
                         <Clock className="h-3 w-3" />
                         {timeFormatter.format(entry.createdAt)}
                       </span>
-                      {expiresLabel ? (
-                        <span className={isExpiringSoon ? "text-destructive" : undefined}>{expiresLabel}</span>
-                      ) : (
-                        <span>no ttl</span>
-                      )}
+                      {expiresLabel ? <span className={ttlClasses}>{expiresLabel}</span> : <span>no ttl</span>}
                     </div>
                     <div className="mt-2 text-sm">
                       {preview ? (

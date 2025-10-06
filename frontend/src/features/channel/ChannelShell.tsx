@@ -53,27 +53,29 @@ export function ChannelShell() {
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,2.3fr)_minmax(0,1.5fr)] lg:gap-8">
-            <ChannelPad
-              localContent={controller.localContent}
-              onLocalContentChange={controller.setLocalContent}
-              localFiles={controller.localFiles}
-              bytesUsed={controller.bytesUsed}
-              byteLimit={controller.channelByteLimit}
-              isDragging={controller.isDragging}
-              onDragOver={controller.handleDragOver}
-              onDragLeave={controller.handleDragLeave}
-              onDrop={controller.handleDrop}
-              onFileSelect={controller.handleFileSelect}
-              fileInputRef={controller.fileInputRef}
-              onRemoveFile={controller.handleRemoveLocalFile}
-              onCopyFile={controller.handleCopyFile}
-              onDownloadFile={controller.handleDownloadFile}
-              onSync={controller.handleSync}
-              isSyncing={controller.isSyncing}
-              channelId={controller.channelId}
-            />
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1.85fr)] lg:gap-10">
+            <div className="flex flex-col gap-6">
+              <ChannelPad
+                localContent={controller.localContent}
+                onLocalContentChange={controller.setLocalContent}
+                localFiles={controller.localFiles}
+                bytesUsed={controller.bytesUsed}
+                byteLimit={controller.channelByteLimit}
+                isDragging={controller.isDragging}
+                onDragOver={controller.handleDragOver}
+                onDragLeave={controller.handleDragLeave}
+                onDrop={controller.handleDrop}
+                onFileSelect={controller.handleFileSelect}
+                fileInputRef={controller.fileInputRef}
+                onRemoveFile={controller.handleRemoveLocalFile}
+                onCopyFile={controller.handleCopyFile}
+                onDownloadFile={controller.handleDownloadFile}
+                onSync={controller.handleSync}
+                isSyncing={controller.isSyncing}
+                channelId={controller.channelId}
+              />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
               <RemotePanel
                 remoteContent={controller.remoteContent}
                 remoteFiles={controller.remoteFiles}

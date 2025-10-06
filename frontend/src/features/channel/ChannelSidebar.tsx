@@ -40,7 +40,7 @@ export function ChannelSidebar({
     <Card>
       <CardHeader>
         <CardTitle>Channel ops</CardTitle>
-        <CardDescription>Provision a TLS channel backed by Redis or join one already running.</CardDescription>
+        <CardDescription>Spin up a TLS 1.3 channel backed by Redis Streams, or join an existing shard.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
@@ -49,7 +49,7 @@ export function ChannelSidebar({
               <Label htmlFor="channel-id">Channel ID</Label>
               <Input
                 id="channel-id"
-                placeholder="channel-id"
+                placeholder="channel-uuid"
                 value={channelInput}
                 onChange={(event) => onChannelInputChange(event.target.value)}
                 spellCheck={false}
@@ -58,10 +58,10 @@ export function ChannelSidebar({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="channel-password">Channel password</Label>
+              <Label htmlFor="channel-password">Channel PSK</Label>
               <Input
                 id="channel-password"
-                placeholder="tls-handshake"
+                placeholder="PSK-or-token"
                 value={channelPasswordInput}
                 onChange={(event) => onChannelPasswordChange(event.target.value)}
                 spellCheck={false}
@@ -70,7 +70,7 @@ export function ChannelSidebar({
               />
             </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
-              Authenticate once per session to decrypt the TLS stream.
+              Present the pre-shared key once per session to unwrap the encrypted stream.
             </p>
           </div>
           <Button onClick={onJoinChannel} className="w-full" variant="secondary">
@@ -83,7 +83,7 @@ export function ChannelSidebar({
           ) : null}
           {channelPassword ? (
             <Button type="button" variant="ghost" className="w-full" onClick={onCopyPassword}>
-              Copy channel secret
+              Copy channel PSK
             </Button>
           ) : null}
         </div>

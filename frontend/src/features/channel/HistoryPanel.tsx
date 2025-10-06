@@ -57,13 +57,13 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
         <Label className="flex items-center gap-2">
           <HistoryIcon className="h-4 w-4 text-primary" /> Channel history
         </Label>
-        <p className="text-xs text-muted-foreground">Snapshots replicate to your session and purge when the channel TTL lapses.</p>
+        <p className="text-xs text-muted-foreground">Snapshots mirror to your session via Redis Streams and purge when the channel TTL lapses.</p>
       </div>
       <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm max-h-[28rem] overflow-y-auto">
         {isLocked ? (
-          <p className="text-muted-foreground">Unlock the channel with its secret to capture history again.</p>
+          <p className="text-muted-foreground">Unlock the channel with its PSK to capture history again.</p>
         ) : entries.length === 0 ? (
-          <p className="text-muted-foreground">No snapshots yet. Remote payloads will pin here as soon as they arrive.</p>
+          <p className="text-muted-foreground">No snapshots yet. Remote payloads land here as soon as the stream emits.</p>
         ) : (
           <ul className="space-y-2">
             {entries.map((entry) => {

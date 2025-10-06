@@ -391,12 +391,12 @@ export function useChannelController() {
       const message = err.message;
       if (message === "channel password missing") {
         setStatus("channel locked");
-        setError("channel password required");
+        setError("channel PSK required");
         return;
       }
       if (message === "invalid channel password") {
         setStatus("channel locked");
-        setError(message);
+        setError("invalid channel PSK");
         setChannelPassword(null);
         setChannelPasswordInput("");
         removeStoredPassword(channelId);
@@ -470,7 +470,7 @@ export function useChannelController() {
       const trimmedPassword = channelPasswordInput.trim();
       if (!trimmedPassword) {
         setStatus("channel locked");
-        setError("channel password required");
+        setError("channel PSK required");
         return;
       }
 
@@ -532,7 +532,7 @@ export function useChannelController() {
 
       if (!passwordToUse) {
         setStatus("channel locked");
-        setError("channel password required");
+        setError("channel PSK required");
         return;
       }
 
@@ -552,7 +552,7 @@ export function useChannelController() {
     } catch (err) {
       console.error(err);
       const message = (err as Error).message;
-      setError(message);
+      setError(message === "invalid channel password" ? "invalid channel PSK" : message);
       const trimmed = channelInput.trim();
       if (message === "invalid channel password") {
         setStatus("channel locked");
@@ -583,7 +583,7 @@ export function useChannelController() {
 
     if (!channelPassword) {
       setStatus("channel locked");
-      setError("channel password required");
+      setError("channel PSK required");
       return;
     }
 
@@ -772,13 +772,13 @@ export function useChannelController() {
 
   const handleCopyChannelPassword = useCallback(async () => {
     if (!channelPassword) {
-      setError("no channel password yet");
+      setError("no channel PSK yet");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(channelPassword);
-      setStatus("channel secret copied");
+      setStatus("channel PSK copied");
     } catch (err) {
       console.error(err);
       setError("could not copy password (needs HTTPS)");

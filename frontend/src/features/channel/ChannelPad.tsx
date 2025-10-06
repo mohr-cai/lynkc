@@ -52,7 +52,7 @@ export function ChannelPad({
         <Textarea
           id="local"
           spellCheck={false}
-          placeholder="drop logs, configs, or secrets you need to shuttle"
+          placeholder="paste kubectl output, manifests, or hex dumps to shuttle"
           value={localContent}
           onChange={(event) => onLocalContentChange(event.target.value)}
           className="min-h-[220px] bg-background/60 backdrop-blur"
@@ -81,7 +81,7 @@ export function ChannelPad({
           )}
         >
           {localFiles.length === 0 ? (
-            <p className="text-muted-foreground">Drop build artifacts here, paste from clipboard, or use the button.</p>
+            <p className="text-muted-foreground">Drop binaries, core dumps, or archives here, paste from clipboard, or use the button.</p>
           ) : (
             <ul className="space-y-2">
               {localFiles.map((file) => (

@@ -18,10 +18,10 @@ export function ChannelShell() {
           <PlugZap className="h-4 w-4 text-primary" />
           LYNKC
         </div>
-        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Web clipboard relay over TLS</h1>
+        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Clipboard relays over TLS 1.3 + Redis Streams</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Bridge your local clipboard to a Rust + Redis backend without leaving the browser. TLS sessions keep payloads
-          private while Redis fan-out keeps the channel responsive at scale.
+          Pipe your clipboard straight into a Rust/Tokio control plane. TLS 1.3 keeps the payload opaque, Redis Streams
+          fans it out in real-time, and nothing ever touches disk.
         </p>
       </header>
 
@@ -48,7 +48,7 @@ export function ChannelShell() {
             <div>
               <CardTitle>Clipboard pad</CardTitle>
               <CardDescription>
-                Draft locally, then sync it across the TLS channel. Remote buffer refreshes every 2s.
+                Draft locally, and LYNKC diff-syncs it through the encrypted channel. Remote buffer pulses every 2s.
               </CardDescription>
             </div>
           </CardHeader>

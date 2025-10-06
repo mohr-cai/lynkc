@@ -1,6 +1,6 @@
 # lynkc
 
-> **Web clipboard relay over TLS.** LYNKC streams your clipboard through a Rust backend with Redis fan-out for scale.
+> **Clipboard relays over TLS 1.3 + Redis Streams.** LYNKC pipes your clipboard through a Rust/Tokio backend with Redis fan-out for scale.
 
 ## Why
 

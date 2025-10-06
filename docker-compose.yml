@@ -1,0 +1,30 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - BIND_ADDRESS=0.0.0.0:8080
+      - CHANNEL_TTL_SECONDS=900
+      - RUST_LOG=info
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://backend:8080
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend

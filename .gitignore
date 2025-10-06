@@ -1,0 +1,10 @@
+# dependencies
+backend/target
+frontend/node_modules
+
+# build artifacts
+frontend/.next
+
+# local env
+.env
+backend/.env

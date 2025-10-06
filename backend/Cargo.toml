@@ -1,0 +1,29 @@
+[package]
+name = "lynkc-backend"
+version = "0.1.0"
+edition = "2021"
+authors = ["lynkc"]
+
+[lib]
+name = "lynkc_backend"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lynkc-backend"
+path = "src/main.rs"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.37", features = ["rt-multi-thread", "macros", "signal", "time"] }
+redis = { version = "0.23", features = ["aio", "tokio-comp", "connection-manager"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
+dotenvy = "0.15"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+[dev-dependencies]
+axum-test = "12"

@@ -46,13 +46,13 @@ export function ChannelPad({
     <div className="flex flex-col gap-3">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="local">Local draft</Label>
+          <Label htmlFor="local">Local buffer</Label>
           <span className="text-xs text-muted-foreground opacity-0 select-none">copy text</span>
         </div>
         <Textarea
           id="local"
           spellCheck={false}
-          placeholder="paste from your real clipboard"
+          placeholder="drop logs, configs, or secrets you need to shuttle"
           value={localContent}
           onChange={(event) => onLocalContentChange(event.target.value)}
           className="min-h-[220px] bg-background/60 backdrop-blur"
@@ -61,12 +61,12 @@ export function ChannelPad({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="flex items-center gap-2">
-            <Paperclip className="h-4 w-4" /> Attachments
+            <Paperclip className="h-4 w-4" /> Artifacts
           </Label>
           <div className="flex items-center gap-2">
             <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileSelect} />
             <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
-              Add files
+              Add artifacts
             </Button>
           </div>
         </div>
@@ -81,7 +81,7 @@ export function ChannelPad({
           )}
         >
           {localFiles.length === 0 ? (
-            <p className="text-muted-foreground">Drop files here, paste from clipboard, or use the button.</p>
+            <p className="text-muted-foreground">Drop build artifacts here, paste from clipboard, or use the button.</p>
           ) : (
             <ul className="space-y-2">
               {localFiles.map((file) => (
@@ -126,7 +126,7 @@ export function ChannelPad({
             </ul>
           )}
           <p className="mt-2 text-[0.7rem] text-muted-foreground">
-            Payload: {formatBytes(bytesUsed)} / {formatBytes(byteLimit)}
+            Payload budget: {formatBytes(bytesUsed)} / {formatBytes(byteLimit)}
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # lynkc
 
-> **Clipboard tunnels for cursed infra moments.** When the vm eats your shortcuts, lynkc sneaks bytes through the browser.
+> **Rust-forged clipboard tunnels for cursed infra moments.** When the VM eats your shortcuts, LYNKC smuggles bytes over TLS through the browser.
 
 ## Why
 

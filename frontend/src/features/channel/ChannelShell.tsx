@@ -16,14 +16,14 @@ export function ChannelShell() {
       <header className="flex flex-col gap-2">
         <div className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
           <PlugZap className="h-4 w-4 text-primary" />
-          lynkc
+          LYNKC // rust-forged
         </div>
         <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
-          Clipboard tunnels for cursed infra moments
+          Rust-forged clipboard tunnels for cursed infra moments
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Spawn a temporary channel and paste bytes through the browser when SSH forbids your clipboard. No disks, just
-          Redis fog.
+          Spin up ephemeral TLS relays compiled in Rust. When SSH locks your clipboard, LYNKC ferries the payload—no
+          disks, no residue.
         </p>
       </header>
 
@@ -48,9 +48,9 @@ export function ChannelShell() {
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/60">
             <div>
-              <CardTitle>Paste pad</CardTitle>
+              <CardTitle>Payload pad</CardTitle>
               <CardDescription>
-                Type or paste locally, then blast it through the tunnel. Remote view refreshes every 2s.
+                Draft locally, then fire it across the TLS tunnel. Remote buffer rehydrates every 2s.
               </CardDescription>
             </div>
           </CardHeader>
@@ -94,7 +94,7 @@ export function ChannelShell() {
                 onClick={controller.handleSync}
                 disabled={controller.isSyncing || !controller.channelId}
               >
-                {controller.isSyncing ? "syncing..." : "Sync up"}
+                {controller.isSyncing ? "syncing..." : "Resync tunnel"}
               </Button>
             </div>
           </CardContent>

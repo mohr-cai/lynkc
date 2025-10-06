@@ -55,15 +55,15 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
     <div className="flex h-full flex-col gap-3">
       <div className="space-y-1">
         <Label className="flex items-center gap-2">
-          <HistoryIcon className="h-4 w-4 text-primary" /> Channel history
+          <HistoryIcon className="h-4 w-4 text-primary" /> Tunnel history
         </Label>
-        <p className="text-xs text-muted-foreground">Snapshots sync to your session and vanish when the channel expires.</p>
+        <p className="text-xs text-muted-foreground">Snapshots replicate to your console and vaporize when the tunnel expires.</p>
       </div>
       <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm max-h-[28rem] overflow-y-auto">
         {isLocked ? (
-          <p className="text-muted-foreground">Unlock the channel with its password to capture history again.</p>
+          <p className="text-muted-foreground">Unlock the tunnel with its secret to capture history again.</p>
         ) : entries.length === 0 ? (
-          <p className="text-muted-foreground">No snapshots yet. Once remote content arrives we will keep it here.</p>
+          <p className="text-muted-foreground">No snapshots yet. Once remote payloads land we pin them here.</p>
         ) : (
           <ul className="space-y-2">
             {entries.map((entry) => {
@@ -100,7 +100,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
                       {preview ? (
                         <p className="max-h-24 overflow-hidden break-words text-foreground">{preview}</p>
                       ) : (
-                        <p className="text-muted-foreground">Remote text was empty.</p>
+                        <p className="text-muted-foreground">Remote payload was empty.</p>
                       )}
                     </div>
                     <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

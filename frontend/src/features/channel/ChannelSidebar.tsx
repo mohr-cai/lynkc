@@ -39,8 +39,8 @@ export function ChannelSidebar({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Channel control</CardTitle>
-        <CardDescription>Create fresh or hook into an existing tunnel.</CardDescription>
+        <CardTitle>Tunnel ops</CardTitle>
+        <CardDescription>Provision a fresh Rust tunnel or hook into one mid-flight.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
@@ -49,7 +49,7 @@ export function ChannelSidebar({
               <Label htmlFor="channel-id">Channel ID</Label>
               <Input
                 id="channel-id"
-                placeholder="ghost-id"
+                placeholder="tunnel-hash"
                 value={channelInput}
                 onChange={(event) => onChannelInputChange(event.target.value)}
                 spellCheck={false}
@@ -61,7 +61,7 @@ export function ChannelSidebar({
               <Label htmlFor="channel-password">Channel password</Label>
               <Input
                 id="channel-password"
-                placeholder="top-secret"
+                placeholder="handshake-secret"
                 value={channelPasswordInput}
                 onChange={(event) => onChannelPasswordChange(event.target.value)}
                 spellCheck={false}
@@ -70,26 +70,26 @@ export function ChannelSidebar({
               />
             </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
-              Required once per session to access a channel.
+              We handshake once per session to decrypt the tunnel.
             </p>
           </div>
           <Button onClick={onJoinChannel} className="w-full" variant="secondary">
-            Attach to channel
+            Attach to tunnel
           </Button>
           {channelLink ? (
             <Button type="button" variant="ghost" className="w-full" onClick={onCopyLink}>
-              Copy shareable link
+              Copy tunnel link
             </Button>
           ) : null}
           {channelPassword ? (
             <Button type="button" variant="ghost" className="w-full" onClick={onCopyPassword}>
-              Copy channel password
+              Copy tunnel secret
             </Button>
           ) : null}
         </div>
         <div className="space-y-2 pt-2">
           <Button onClick={onCreateChannel} disabled={isCreating} className="w-full">
-            {isCreating ? "booting..." : "Generate brand new"}
+            {isCreating ? "forging..." : "Forge new tunnel"}
           </Button>
         </div>
         <div className="rounded-md border border-dashed border-border/60 p-3 text-xs text-muted-foreground">

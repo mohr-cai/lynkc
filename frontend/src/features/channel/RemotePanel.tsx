@@ -23,14 +23,14 @@ export function RemotePanel({
   onCopyFile,
   onDownloadFile,
 }: RemotePanelProps) {
-  const placeholderContent = "████████████████\nchannel locked (password required)";
+  const placeholderContent = "████████████████\ntunnel locked (secret required)";
 
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="remote" className="flex items-center gap-2">
-            Remote view
+            Remote buffer
           </Label>
           <Button
             type="button"
@@ -39,7 +39,7 @@ export function RemotePanel({
             onClick={onCopyRemote}
             disabled={isLocked || !remoteContent}
           >
-            <Copy className="mr-2 h-4 w-4" /> copy text
+            <Copy className="mr-2 h-4 w-4" /> copy payload
           </Button>
         </div>
         <div className="relative">
@@ -52,14 +52,14 @@ export function RemotePanel({
           />
           {isLocked ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
-              Password required to unlock remote view
+              Tunnel secret required to decrypt remote buffer
             </div>
           ) : null}
         </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Paperclip className="h-4 w-4 text-primary" /> Remote attachments
+          <Paperclip className="h-4 w-4 text-primary" /> Remote artifacts
         </div>
         <div className="relative space-y-1 rounded-md border border-dashed border-border/60 p-3 text-xs">
           {isLocked ? (
@@ -76,10 +76,10 @@ export function RemotePanel({
                   </Button>
                 </div>
               </div>
-              <p className="text-muted-foreground">Unlock with channel password to view real attachments.</p>
+              <p className="text-muted-foreground">Unlock with the tunnel secret to inspect real artifacts.</p>
             </div>
           ) : remoteFiles.length === 0 ? (
-            <p className="text-muted-foreground">No remote files in this channel.</p>
+            <p className="text-muted-foreground">No remote artifacts in this tunnel.</p>
           ) : (
             <ul className="space-y-2">
               {remoteFiles.map((file) => (

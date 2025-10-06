@@ -16,14 +16,12 @@ export function ChannelShell() {
       <header className="flex flex-col gap-2">
         <div className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.3em] text-muted-foreground">
           <PlugZap className="h-4 w-4 text-primary" />
-          LYNKC // rust-forged
+          LYNKC
         </div>
-        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
-          Rust-forged clipboard tunnels for cursed infra moments
-        </h1>
+        <h1 className="text-4xl font-semibold leading-tight md:text-5xl">Web clipboard relay over TLS</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Spin up ephemeral TLS relays compiled in Rust. When SSH locks your clipboard, LYNKC ferries the payload—no
-          disks, no residue.
+          Bridge your local clipboard to a Rust + Redis backend without leaving the browser. TLS sessions keep payloads
+          private while Redis fan-out keeps the channel responsive at scale.
         </p>
       </header>
 
@@ -48,9 +46,9 @@ export function ChannelShell() {
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/60">
             <div>
-              <CardTitle>Payload pad</CardTitle>
+              <CardTitle>Clipboard pad</CardTitle>
               <CardDescription>
-                Draft locally, then fire it across the TLS tunnel. Remote buffer rehydrates every 2s.
+                Draft locally, then sync it across the TLS channel. Remote buffer refreshes every 2s.
               </CardDescription>
             </div>
           </CardHeader>
@@ -94,7 +92,7 @@ export function ChannelShell() {
                 onClick={controller.handleSync}
                 disabled={controller.isSyncing || !controller.channelId}
               >
-                {controller.isSyncing ? "syncing..." : "Resync tunnel"}
+                {controller.isSyncing ? "syncing..." : "Resync channel"}
               </Button>
             </div>
           </CardContent>

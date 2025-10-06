@@ -55,15 +55,15 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry }: HistoryPanelP
     <div className="flex h-full flex-col gap-3">
       <div className="space-y-1">
         <Label className="flex items-center gap-2">
-          <HistoryIcon className="h-4 w-4 text-primary" /> Tunnel history
+          <HistoryIcon className="h-4 w-4 text-primary" /> Channel history
         </Label>
-        <p className="text-xs text-muted-foreground">Snapshots replicate to your console and vaporize when the tunnel expires.</p>
+        <p className="text-xs text-muted-foreground">Snapshots replicate to your session and purge when the channel TTL lapses.</p>
       </div>
       <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm max-h-[28rem] overflow-y-auto">
         {isLocked ? (
-          <p className="text-muted-foreground">Unlock the tunnel with its secret to capture history again.</p>
+          <p className="text-muted-foreground">Unlock the channel with its secret to capture history again.</p>
         ) : entries.length === 0 ? (
-          <p className="text-muted-foreground">No snapshots yet. Once remote payloads land we pin them here.</p>
+          <p className="text-muted-foreground">No snapshots yet. Remote payloads will pin here as soon as they arrive.</p>
         ) : (
           <ul className="space-y-2">
             {entries.map((entry) => {

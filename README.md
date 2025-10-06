@@ -1,6 +1,6 @@
 # lynkc
 
-> **Rust-forged clipboard tunnels for cursed infra moments.** When the VM eats your shortcuts, LYNKC smuggles bytes over TLS through the browser.
+> **Web clipboard relay over TLS.** LYNKC streams your clipboard through a Rust backend with Redis fan-out for scale.
 
 ## Why
 

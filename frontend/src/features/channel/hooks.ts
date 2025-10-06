@@ -51,7 +51,7 @@ export function useChannelController() {
   const [localContent, setLocalContent] = useState("");
   const [localFiles, setLocalFiles] = useState<ChannelFile[]>([]);
   const [history, setHistory] = useState<ChannelHistoryEntry[]>([]);
-  const [status, setStatus] = useState<string>("tunnel detached");
+  const [status, setStatus] = useState<string>("channel detached");
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -120,7 +120,7 @@ export function useChannelController() {
       setLocalContent("");
       setLocalFiles([]);
       setHistory([]);
-      setStatus(nextStatus ?? "tunnel detached");
+      setStatus(nextStatus ?? "channel detached");
       setError(nextError ?? null);
       lastSnapshotRef.current = null;
       channelExpiresAtRef.current = null;
@@ -390,12 +390,12 @@ export function useChannelController() {
       console.error(err);
       const message = err.message;
       if (message === "channel password missing") {
-        setStatus("tunnel locked");
+        setStatus("channel locked");
         setError("channel password required");
         return;
       }
       if (message === "invalid channel password") {
-        setStatus("tunnel locked");
+        setStatus("channel locked");
         setError(message);
         setChannelPassword(null);
         setChannelPasswordInput("");
@@ -403,16 +403,16 @@ export function useChannelController() {
         return;
       }
       if (message === "channel not found") {
-        clearChannelState({ channelId: channelId ?? undefined, status: "tunnel expired", error: message });
+        clearChannelState({ channelId: channelId ?? undefined, status: "channel expired", error: message });
         return;
       }
-      setStatus("tunnel glitch?");
+      setStatus("channel glitch?");
       setError(message);
       return;
     }
 
     if (channelQuery.isSuccess) {
-      setStatus("tunnel linked");
+      setStatus("channel linked");
       setError(null);
     }
   }, [
@@ -469,7 +469,7 @@ export function useChannelController() {
     try {
       const trimmedPassword = channelPasswordInput.trim();
       if (!trimmedPassword) {
-        setStatus("tunnel locked");
+        setStatus("channel locked");
         setError("channel password required");
         return;
       }
@@ -485,7 +485,7 @@ export function useChannelController() {
       persistStoredPassword(channel.id, channel.password);
       setChannelId(channel.id);
       setChannelInput(channel.id);
-      setStatus("tunnel linked");
+      setStatus("channel linked");
 
       queryClient.setQueryData<ChannelPayload>(["channel", channel.id, channel.password], {
         id: channel.id,
@@ -531,7 +531,7 @@ export function useChannelController() {
       }
 
       if (!passwordToUse) {
-        setStatus("tunnel locked");
+        setStatus("channel locked");
         setError("channel password required");
         return;
       }
@@ -541,7 +541,7 @@ export function useChannelController() {
       persistStoredPassword(channel.id, passwordToUse);
       setChannelId(channel.id);
       setChannelInput(channel.id);
-      setStatus("tunnel linked");
+      setStatus("channel linked");
 
       queryClient.setQueryData<ChannelPayload>(["channel", channel.id, passwordToUse], channel);
 
@@ -555,14 +555,14 @@ export function useChannelController() {
       setError(message);
       const trimmed = channelInput.trim();
       if (message === "invalid channel password") {
-        setStatus("tunnel locked");
+        setStatus("channel locked");
         setChannelPassword(null);
         setChannelPasswordInput("");
         removeStoredPassword(trimmed);
         return;
       }
       if (message === "channel not found") {
-        clearChannelState({ channelId: trimmed, status: "tunnel not found", error: message });
+        clearChannelState({ channelId: trimmed, status: "channel not found", error: message });
       }
     }
   }, [
@@ -582,7 +582,7 @@ export function useChannelController() {
     }
 
     if (!channelPassword) {
-      setStatus("tunnel locked");
+      setStatus("channel locked");
       setError("channel password required");
       return;
     }
@@ -599,7 +599,7 @@ export function useChannelController() {
         text: localContent,
         files: localFiles,
       });
-      setStatus("tunnel synced");
+      setStatus("channel synced");
 
       queryClient.setQueryData<ChannelPayload | undefined>(
         ["channel", channelId, channelPassword],
@@ -763,7 +763,7 @@ export function useChannelController() {
 
     try {
       await navigator.clipboard.writeText(channelLink);
-      setStatus("tunnel link copied");
+      setStatus("channel link copied");
     } catch (err) {
       console.error(err);
       setError("could not copy link (needs HTTPS)");
@@ -778,7 +778,7 @@ export function useChannelController() {
 
     try {
       await navigator.clipboard.writeText(channelPassword);
-      setStatus("tunnel secret copied");
+      setStatus("channel secret copied");
     } catch (err) {
       console.error(err);
       setError("could not copy password (needs HTTPS)");

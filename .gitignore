@@ -2,8 +2,11 @@
 backend/target
 frontend/node_modules
 
+target/
+
 # build artifacts
 frontend/dist
 
 # local env
 .env
+

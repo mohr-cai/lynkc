@@ -5,6 +5,7 @@ import { useChannelController } from "./hooks";
 import { ChannelPad } from "./ChannelPad";
 import { ChannelSidebar } from "./ChannelSidebar";
 import { RemotePanel } from "./RemotePanel";
+import { HistoryPanel } from "./HistoryPanel";
 
 export function ChannelShell() {
   const controller = useChannelController();
@@ -20,7 +21,7 @@ export function ChannelShell() {
           Clipboard tunnels for cursed infra moments
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Spawn a temporary channel and paste text through the browser when SSH forbids your clipboard. No disks, just
+          Spawn a temporary channel and paste bytes through the browser when SSH forbids your clipboard. No disks, just
           Redis fog.
         </p>
       </header>
@@ -52,7 +53,7 @@ export function ChannelShell() {
               </CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-2">
+          <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <ChannelPad
               localContent={controller.localContent}
               onLocalContentChange={controller.setLocalContent}
@@ -79,6 +80,11 @@ export function ChannelShell() {
               onCopyRemote={controller.handleCopyRemote}
               onCopyFile={controller.handleCopyFile}
               onDownloadFile={controller.handleDownloadFile}
+            />
+            <HistoryPanel
+              entries={controller.history}
+              isLocked={controller.requiresPassword}
+              onSelectEntry={controller.handleApplyHistoryEntry}
             />
           </CardContent>
         </Card>

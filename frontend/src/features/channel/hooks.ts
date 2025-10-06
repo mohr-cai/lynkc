@@ -6,6 +6,8 @@ import { base64ToBlob, CHANNEL_BYTE_LIMIT, formatBytes } from "@/lib/files";
 
 const POLL_INTERVAL_MS = 2000;
 const SESSION_STORAGE_KEY_PREFIX = "lynkc-channel-password:";
+const HISTORY_RETENTION_CHECK_INTERVAL_MS = 1000;
+const MAX_HISTORY_ENTRIES = 20;
 
 function generateId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -13,6 +15,14 @@ function generateId() {
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
+
+export type ChannelHistoryEntry = {
+  id: string;
+  text: string;
+  files: ChannelFile[];
+  createdAt: number;
+  expiresAt: number | null;
+};
 
 async function readFileAsChannelFile(file: File): Promise<ChannelFile> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -40,11 +50,14 @@ export function useChannelController() {
   const [channelPasswordInput, setChannelPasswordInput] = useState("");
   const [localContent, setLocalContent] = useState("");
   const [localFiles, setLocalFiles] = useState<ChannelFile[]>([]);
+  const [history, setHistory] = useState<ChannelHistoryEntry[]>([]);
   const [status, setStatus] = useState<string>("not linked");
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textEncoder = useMemo(() => new TextEncoder(), []);
+  const lastSnapshotRef = useRef<string | null>(null);
+  const channelExpiresAtRef = useRef<number | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -106,8 +119,11 @@ export function useChannelController() {
       setChannelPasswordInput("");
       setLocalContent("");
       setLocalFiles([]);
+      setHistory([]);
       setStatus(nextStatus ?? "not linked");
       setError(nextError ?? null);
+      lastSnapshotRef.current = null;
+      channelExpiresAtRef.current = null;
 
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
@@ -146,6 +162,112 @@ export function useChannelController() {
   const remoteContent = channelQuery.data?.text ?? "";
   const remoteFiles = channelQuery.data?.files ?? [];
   const ttlSeconds = channelQuery.data?.ttl_seconds ?? null;
+
+  useEffect(() => {
+    if (ttlSeconds === null) {
+      channelExpiresAtRef.current = null;
+      setHistory((prev) => {
+        if (prev.length === 0) {
+          return prev;
+        }
+        return prev.map((entry) => (entry.expiresAt === null ? entry : { ...entry, expiresAt: null }));
+      });
+      return;
+    }
+
+    const nextExpiresAt = Date.now() + ttlSeconds * 1000;
+    const previousExpiresAt = channelExpiresAtRef.current;
+    channelExpiresAtRef.current = nextExpiresAt;
+
+    if (previousExpiresAt === null || nextExpiresAt > previousExpiresAt) {
+      setHistory((prev) => {
+        if (prev.length === 0) {
+          return prev;
+        }
+        return prev.map((entry) => ({ ...entry, expiresAt: nextExpiresAt }));
+      });
+    }
+  }, [ttlSeconds]);
+
+  useEffect(() => {
+    if (!channelId || !channelPassword) {
+      return;
+    }
+
+    if (!channelQuery.data) {
+      return;
+    }
+
+    const now = Date.now();
+    const normalizedText = channelQuery.data.text ?? "";
+    const rawFiles = channelQuery.data.files ?? [];
+    const signature = JSON.stringify({
+      text: normalizedText,
+      files: rawFiles.map((file) => `${file.id}:${file.size}:${file.data_base64}`),
+    });
+
+    if (lastSnapshotRef.current === signature) {
+      return;
+    }
+
+    lastSnapshotRef.current = signature;
+
+    const expiresAt = channelExpiresAtRef.current ?? (ttlSeconds !== null ? now + ttlSeconds * 1000 : null);
+
+    setHistory((prev) => {
+      const pruned = prev.filter((entry) => entry.expiresAt === null || entry.expiresAt > now);
+      const latest = pruned[0];
+      if (
+        latest &&
+        latest.text === normalizedText &&
+        latest.files.length === rawFiles.length &&
+        latest.files.every((file, index) => {
+          const counterpart = rawFiles[index];
+          return (
+            file.id === counterpart.id &&
+            file.size === counterpart.size &&
+            file.data_base64 === counterpart.data_base64 &&
+            file.name === counterpart.name &&
+            file.mime_type === counterpart.mime_type
+          );
+        })
+      ) {
+        return pruned;
+      }
+
+      const nextEntry: ChannelHistoryEntry = {
+        id: generateId(),
+        text: normalizedText,
+        files: rawFiles.map((file) => ({ ...file })),
+        createdAt: now,
+        expiresAt,
+      };
+
+      const nextHistory = [nextEntry, ...pruned];
+      if (nextHistory.length > MAX_HISTORY_ENTRIES) {
+        return nextHistory.slice(0, MAX_HISTORY_ENTRIES);
+      }
+      return nextHistory;
+    });
+  }, [channelId, channelPassword, channelQuery.data, ttlSeconds]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      setHistory((prev) => {
+        const next = prev.filter((entry) => entry.expiresAt === null || entry.expiresAt > now);
+        return next.length === prev.length ? prev : next;
+      });
+    }, HISTORY_RETENTION_CHECK_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const computeBytes = useCallback(
     (textValue: string, filesValue: ChannelFile[]) => {
@@ -217,6 +339,18 @@ export function useChannelController() {
 
   useEffect(() => {
     if (!channelId) {
+      setHistory([]);
+      lastSnapshotRef.current = null;
+      channelExpiresAtRef.current = null;
+      return;
+    }
+
+    setHistory([]);
+    lastSnapshotRef.current = null;
+  }, [channelId]);
+
+  useEffect(() => {
+    if (!channelId) {
       setChannelPassword(null);
       setChannelPasswordInput("");
       return;
@@ -232,6 +366,19 @@ export function useChannelController() {
       setChannelPasswordInput(stored);
     }
   }, [channelId, channelPassword, readStoredPassword]);
+
+  useEffect(() => {
+    if (!channelId) {
+      return;
+    }
+
+    if (channelPassword) {
+      return;
+    }
+
+    setHistory([]);
+    lastSnapshotRef.current = null;
+  }, [channelId, channelPassword]);
 
   useEffect(() => {
     if (!channelId) {
@@ -488,6 +635,21 @@ export function useChannelController() {
     updateChannelMutation,
   ]);
 
+  const handleApplyHistoryEntry = useCallback(
+    (entryId: string) => {
+      const entry = history.find((item) => item.id === entryId);
+      if (!entry) {
+        return;
+      }
+
+      setError(null);
+      setLocalContent(entry.text);
+      setLocalFiles(entry.files.map((file) => ({ ...file })));
+      setStatus("loaded snapshot from history");
+    },
+    [history, setError, setLocalContent, setLocalFiles, setStatus]
+  );
+
   const handleCopyRemote = useCallback(async () => {
     if (!remoteContent || !channelPassword) return;
     try {
@@ -655,12 +817,14 @@ export function useChannelController() {
     localFiles,
     remoteContent,
     remoteFiles,
+    history,
     requiresPassword: !!channelId && !channelPassword,
     bytesUsed,
     channelByteLimit: CHANNEL_BYTE_LIMIT,
     handleCreateChannel,
     handleJoinChannel,
     handleSync,
+    handleApplyHistoryEntry,
     handleCopyRemote,
     handleCopyFile,
     handleDownloadFile,

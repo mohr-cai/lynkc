@@ -1,6 +1,6 @@
-use base64::engine::general_purpose::STANDARD as BASE64_ENGINE;
 use base64::Engine;
-use rand::{distributions::Alphanumeric, Rng};
+use base64::engine::general_purpose::STANDARD as BASE64_ENGINE;
+use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;

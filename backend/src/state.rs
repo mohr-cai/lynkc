@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use redis::{aio::ConnectionManager, AsyncCommands};
+use redis::{AsyncCommands, aio::ConnectionManager};
 
 use crate::{config::AppConfig, error::AppError};
 

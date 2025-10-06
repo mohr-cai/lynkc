@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
-    Json,
 };
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
@@ -9,12 +9,12 @@ use tracing::instrument;
 
 use crate::{
     channel::{
-        deserialize_channel, generate_channel_id, generate_channel_password, hash_channel_password,
-        serialize_channel, validate_channel_data, verify_channel_password, ChannelData,
-        ChannelFile, StoredChannel,
+        ChannelData, ChannelFile, StoredChannel, deserialize_channel, generate_channel_id,
+        generate_channel_password, hash_channel_password, serialize_channel, validate_channel_data,
+        verify_channel_password,
     },
     error::AppError,
-    state::{refresh_ttl, SharedState},
+    state::{SharedState, refresh_ttl},
 };
 
 const CHANNEL_PASSWORD_HEADER: &str = "x-channel-password";

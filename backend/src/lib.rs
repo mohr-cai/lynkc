@@ -7,7 +7,7 @@ pub mod state;
 use app::build_router;
 use config::AppConfig;
 use error::AppError;
-use state::{shared, AppState};
+use state::{AppState, shared};
 use tokio::net::TcpListener;
 use tracing::info;
 

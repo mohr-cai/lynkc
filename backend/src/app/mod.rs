@@ -1,14 +1,14 @@
 mod handlers;
 
 pub use handlers::{
-    create_channel, fetch_channel, health_check, update_channel, ChannelPayloadResponse,
-    CreateChannelRequest, CreateChannelResponse, UpdateChannelRequest,
+    ChannelPayloadResponse, CreateChannelRequest, CreateChannelResponse, UpdateChannelRequest,
+    create_channel, fetch_channel, health_check, update_channel,
 };
 
 use axum::{
+    Router,
     extract::DefaultBodyLimit,
     routing::{get, post},
-    Router,
 };
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
 

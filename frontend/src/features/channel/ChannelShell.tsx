@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlugZap } from "lucide-react";
+import { Github, PlugZap } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,6 +130,17 @@ export function ChannelShell() {
           </CardContent>
         </Card>
       </section>
+      <footer className="mt-auto flex justify-end px-4 pb-6 md:px-10">
+        <a
+          href="https://github.com/mohr-cai/lynkc"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="inline-flex items-center gap-2 text-xs text-muted-foreground transition hover:text-primary"
+        >
+          <Github className="h-4 w-4" aria-hidden="true" />
+          GitHub
+        </a>
+      </footer>
     </main>
   );
 }

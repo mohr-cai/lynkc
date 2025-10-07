@@ -78,12 +78,6 @@ export function ChannelPad({
           <Label className="flex items-center gap-2">
             <Paperclip className="h-4 w-4" /> Artifacts
           </Label>
-          <div className="flex items-center gap-2">
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileSelect} />
-            <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
-              Add artifacts
-            </Button>
-          </div>
         </div>
         <div
           onDragEnter={onDragOver}
@@ -143,6 +137,12 @@ export function ChannelPad({
           <p className="mt-2 text-[0.7rem] text-muted-foreground">
             Payload budget: {formatBytes(bytesUsed)} / {formatBytes(byteLimit)}
           </p>
+        </div>
+        <div className="flex justify-end">
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileSelect} />
+          <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+            Add artifacts
+          </Button>
         </div>
       </div>
     </div>

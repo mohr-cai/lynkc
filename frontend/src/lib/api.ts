@@ -109,3 +109,33 @@ export async function updateChannel(id: string, password: string, text: string, 
     throw new Error(`failed to update channel: ${response.statusText}`);
   }
 }
+
+export async function deleteChannelFile(id: string, password: string, fileId: string) {
+  const response = await fetch(buildUrl(`/api/channels/${id}/files/${fileId}`), {
+    method: "DELETE",
+    headers: {
+      [CHANNEL_PASSWORD_HEADER]: password,
+    },
+  });
+
+  if (response.status === 404) {
+    let message = "channel file not found";
+    try {
+      const payload = (await response.json()) as { message?: string };
+      if (payload?.message) {
+        message = payload.message;
+      }
+    } catch {
+      // ignored: fall back to default message
+    }
+    throw new Error(message);
+  }
+
+  if (response.status === 401) {
+    throw new Error("invalid channel password");
+  }
+
+  if (!response.ok) {
+    throw new Error(`failed to delete channel file: ${response.statusText}`);
+  }
+}

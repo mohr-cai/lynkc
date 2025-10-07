@@ -1,7 +1,14 @@
 import { ChangeEvent, DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ChannelFile, ChannelPayload, createChannel, fetchChannel, updateChannel } from "@/lib/api";
+import {
+  ChannelFile,
+  ChannelPayload,
+  createChannel,
+  deleteChannelFile,
+  fetchChannel,
+  updateChannel,
+} from "@/lib/api";
 import { base64ToBlob, CHANNEL_BYTE_LIMIT, formatBytes } from "@/lib/files";
 
 const POLL_INTERVAL_MS = 2000;
@@ -460,6 +467,18 @@ export function useChannelController() {
     }) => updateChannel(id, password, text, files),
   });
 
+  const deleteChannelFileMutation = useMutation({
+    mutationFn: ({
+      id,
+      password,
+      fileId,
+    }: {
+      id: string;
+      password: string;
+      fileId: string;
+    }) => deleteChannelFile(id, password, fileId),
+  });
+
   const handleCreateChannel = useCallback(async () => {
     setError(null);
     if (!enforceLimit(localContent, localFiles)) {
@@ -650,6 +669,16 @@ export function useChannelController() {
     [history, setError, setLocalContent, setLocalFiles, setStatus]
   );
 
+  const handleDeleteHistoryEntry = useCallback(
+    (entryId: string) => {
+      setHistory((prev) => prev.filter((entry) => entry.id !== entryId));
+      lastSnapshotRef.current = null;
+      setError(null);
+      setStatus("removed history snapshot");
+    },
+    [setError, setHistory, setStatus]
+  );
+
   const handleCopyRemote = useCallback(async () => {
     if (!remoteContent || !channelPassword) return;
     try {
@@ -698,6 +727,101 @@ export function useChannelController() {
     URL.revokeObjectURL(url);
     setStatus(`downloaded ${file.name}`);
   }, []);
+
+  const handleDeleteRemoteFile = useCallback(
+    async (file: ChannelFile) => {
+      if (!channelId) {
+        setError("no channel yet");
+        return;
+      }
+
+      if (!channelPassword) {
+        setStatus("channel locked");
+        setError("channel PSK required");
+        return;
+      }
+
+      setError(null);
+      try {
+        await deleteChannelFileMutation.mutateAsync({
+          id: channelId,
+          password: channelPassword,
+          fileId: file.id,
+        });
+
+        setStatus(`deleted ${file.name}`);
+        queryClient.setQueryData<ChannelPayload | undefined>(
+          ["channel", channelId, channelPassword],
+          (previous) => {
+            if (!previous) {
+              return previous;
+            }
+            return {
+              ...previous,
+              files: previous.files.filter((item) => item.id !== file.id),
+            };
+          }
+        );
+        setHistory((prev) =>
+          prev.map((entry) => ({
+            ...entry,
+            files: entry.files.filter((candidate) => candidate.id !== file.id),
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+        const message = (err as Error).message;
+
+        if (message === "invalid channel password") {
+          setStatus("channel locked");
+          setError("invalid channel PSK");
+          setChannelPassword(null);
+          setChannelPasswordInput("");
+          removeStoredPassword(channelId);
+          return;
+        }
+
+        if (message === "channel not found") {
+          clearChannelState({ channelId, status: "channel expired", error: message });
+          return;
+        }
+
+        if (message === "channel file not found") {
+          queryClient.setQueryData<ChannelPayload | undefined>(
+            ["channel", channelId, channelPassword],
+            (previous) => {
+              if (!previous) {
+                return previous;
+              }
+              return {
+                ...previous,
+                files: previous.files.filter((item) => item.id !== file.id),
+              };
+            }
+          );
+          setHistory((prev) =>
+            prev.map((entry) => ({
+              ...entry,
+              files: entry.files.filter((candidate) => candidate.id !== file.id),
+            }))
+          );
+          setError(null);
+          setStatus("artifact already removed");
+          return;
+        }
+
+        setError(message);
+      }
+    },
+    [
+      channelId,
+      channelPassword,
+      clearChannelState,
+      deleteChannelFileMutation,
+      queryClient,
+      removeStoredPassword,
+    ]
+  );
 
   const handleFileSelect = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -825,7 +949,9 @@ export function useChannelController() {
     handleJoinChannel,
     handleSync,
     handleApplyHistoryEntry,
+    handleDeleteHistoryEntry,
     handleCopyRemote,
+    handleDeleteRemoteFile,
     handleCopyFile,
     handleDownloadFile,
     handleFileSelect,

@@ -1,4 +1,4 @@
-import { Copy, Download, Paperclip } from "lucide-react";
+import { Copy, Download, Paperclip, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ interface RemotePanelProps {
   onCopyRemote: () => void;
   onCopyFile: (file: ChannelFile) => Promise<void>;
   onDownloadFile: (file: ChannelFile) => void;
+  onDeleteFile: (file: ChannelFile) => Promise<void> | void;
 }
 
 export function RemotePanel({
@@ -22,6 +23,7 @@ export function RemotePanel({
   onCopyRemote,
   onCopyFile,
   onDownloadFile,
+  onDeleteFile,
 }: RemotePanelProps) {
   const placeholderContent = "████████████████\nchannel locked (PSK)";
 
@@ -74,6 +76,9 @@ export function RemotePanel({
                   <Button type="button" size="icon" variant="ghost" disabled title="Download disabled">
                     <Download className="h-4 w-4" />
                   </Button>
+                  <Button type="button" size="icon" variant="ghost" disabled title="Delete disabled">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
               <p className="text-muted-foreground">Unlock with the channel PSK to see real artifacts.</p>
@@ -106,6 +111,17 @@ export function RemotePanel({
                       title="Download file"
                     >
                       <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        void onDeleteFile(file);
+                      }}
+                      title="Delete file"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </li>

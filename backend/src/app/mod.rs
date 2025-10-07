@@ -2,13 +2,13 @@ mod handlers;
 
 pub use handlers::{
     ChannelPayloadResponse, CreateChannelRequest, CreateChannelResponse, UpdateChannelRequest,
-    create_channel, fetch_channel, health_check, update_channel,
+    create_channel, delete_channel_file, fetch_channel, health_check, update_channel,
 };
 
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
 
@@ -19,6 +19,10 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/health", get(health_check))
         .route("/api/channels", post(create_channel))
         .route("/api/channels/:id", get(fetch_channel).put(update_channel))
+        .route(
+            "/api/channels/:id/files/:file_id",
+            delete(delete_channel_file),
+        )
         .layer(
             CorsLayer::new()
                 .allow_methods([

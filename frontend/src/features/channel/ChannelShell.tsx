@@ -76,11 +76,13 @@ export function ChannelShell() {
                 onCopyRemote={controller.handleCopyRemote}
                 onCopyFile={controller.handleCopyFile}
                 onDownloadFile={controller.handleDownloadFile}
+                onDeleteFile={controller.handleDeleteRemoteFile}
               />
               <HistoryPanel
                 entries={controller.history}
                 isLocked={controller.requiresPassword}
                 onSelectEntry={controller.handleApplyHistoryEntry}
+                onDeleteEntry={controller.handleDeleteHistoryEntry}
               />
             </div>
             <div className="md:col-span-2">

@@ -188,3 +188,45 @@ pub async fn update_channel(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[instrument(level = "debug", skip(state, headers))]
+pub async fn delete_channel_file(
+    Path((id, file_id)): Path<(String, String)>,
+    headers: HeaderMap,
+    State(state): State<SharedState>,
+) -> Result<StatusCode, AppError> {
+    let provided_password = headers
+        .get(CHANNEL_PASSWORD_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+
+    let key = state.channel_key(&id);
+    let mut conn = state.redis();
+
+    let raw: Option<String> = conn.get(&key).await?;
+    let Some(raw) = raw else {
+        return Err(AppError::ChannelNotFound);
+    };
+
+    let mut record = deserialize_channel(raw);
+    if !verify_channel_password(
+        record.password_hash.as_deref(),
+        provided_password.as_deref(),
+    ) {
+        return Err(AppError::InvalidChannelPassword);
+    }
+
+    let before = record.data.files.len();
+    record.data.files.retain(|file| file.id != file_id);
+
+    if before == record.data.files.len() {
+        return Err(AppError::ChannelFileNotFound);
+    }
+
+    validate_channel_data(&record.data)?;
+    let serialized = serialize_channel(&record)?;
+
+    let _: () = conn.set_ex(&key, serialized, state.ttl_seconds()).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}

@@ -1,4 +1,4 @@
-import { Copy, Download, Paperclip, Trash2 } from "lucide-react";
+import { Copy, Download, Paperclip, RotateCcw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,10 +10,12 @@ interface RemotePanelProps {
   remoteContent: string;
   remoteFiles: ChannelFile[];
   isLocked: boolean;
-  onCopyRemote: () => void;
+  onCopyRemote: () => Promise<void> | void;
   onCopyFile: (file: ChannelFile) => Promise<void>;
   onDownloadFile: (file: ChannelFile) => void;
   onDeleteFile: (file: ChannelFile) => Promise<void> | void;
+  onFlushBuffer: () => Promise<void> | void;
+  canFlush: boolean;
 }
 
 export function RemotePanel({
@@ -24,6 +26,8 @@ export function RemotePanel({
   onCopyFile,
   onDownloadFile,
   onDeleteFile,
+  onFlushBuffer,
+  canFlush,
 }: RemotePanelProps) {
   const placeholderContent = "████████████████\nchannel locked (PSK)";
 
@@ -34,15 +38,6 @@ export function RemotePanel({
           <Label htmlFor="remote" className="flex items-center gap-2">
             Remote buffer
           </Label>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={onCopyRemote}
-            disabled={isLocked || !remoteContent}
-          >
-            <Copy className="mr-2 h-4 w-4" /> copy payload
-          </Button>
         </div>
         <div className="relative">
           <Textarea
@@ -57,6 +52,30 @@ export function RemotePanel({
               Unlock with channel PSK
             </div>
           ) : null}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={onCopyRemote}
+            aria-label="Copy remote buffer"
+            disabled={isLocked || !remoteContent}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              void onFlushBuffer();
+            }}
+            aria-label="Flush remote buffer"
+            disabled={isLocked || !canFlush}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
       <div className="space-y-2">

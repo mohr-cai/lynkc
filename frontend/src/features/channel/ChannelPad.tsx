@@ -23,6 +23,7 @@ interface ChannelPadProps {
   onRemoveFile: (id: string) => void;
   onCopyFile: (file: ChannelFile) => Promise<void>;
   onDownloadFile: (file: ChannelFile) => void;
+  onCopyLocal: () => Promise<void> | void;
   onAddFilesHint?: string;
 }
 
@@ -41,13 +42,13 @@ export function ChannelPad({
   onRemoveFile,
   onCopyFile,
   onDownloadFile,
+  onCopyLocal,
 }: ChannelPadProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="local">Local buffer</Label>
-          <span className="text-xs text-muted-foreground opacity-0 select-none">copy text</span>
         </div>
         <Textarea
           id="local"
@@ -57,6 +58,20 @@ export function ChannelPad({
           onChange={(event) => onLocalContentChange(event.target.value)}
           className="min-h-[180px] md:min-h-[220px] bg-background/60 backdrop-blur"
         />
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              void onCopyLocal();
+            }}
+            aria-label="Copy local buffer"
+            disabled={!localContent}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">

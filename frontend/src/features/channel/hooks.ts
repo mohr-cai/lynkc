@@ -728,6 +728,21 @@ export function useChannelController() {
     setStatus(`downloaded ${file.name}`);
   }, []);
 
+  const handleCopyLocal = useCallback(async () => {
+    if (!localContent) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(localContent);
+      setStatus("copied local payload");
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("could not touch clipboard (needs HTTPS)");
+    }
+  }, [localContent]);
+
   const handleDeleteRemoteFile = useCallback(
     async (file: ChannelFile) => {
       if (!channelId) {
@@ -822,6 +837,65 @@ export function useChannelController() {
       removeStoredPassword,
     ]
   );
+
+  const handleFlushChannel = useCallback(async () => {
+    setError(null);
+
+    if (!channelId) {
+      setLocalContent("");
+      setLocalFiles([]);
+      setStatus("local buffer cleared");
+      return;
+    }
+
+    if (!channelPassword) {
+      setStatus("channel locked");
+      setError("channel PSK required");
+      return;
+    }
+
+    try {
+      await updateChannelMutation.mutateAsync({
+        id: channelId,
+        password: channelPassword,
+        text: "",
+        files: [],
+      });
+
+      setLocalContent("");
+      setLocalFiles([]);
+      setStatus("channel renewed");
+
+      queryClient.setQueryData<ChannelPayload | undefined>(
+        ["channel", channelId, channelPassword],
+        (previous) => {
+          if (!previous) {
+            return {
+              id: channelId,
+              text: "",
+              files: [],
+              ttl_seconds: ttlSeconds,
+            } as ChannelPayload;
+          }
+
+          return {
+            ...previous,
+            text: "",
+            files: [],
+          };
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      setError((err as Error).message);
+    }
+  }, [
+    channelId,
+    channelPassword,
+    queryClient,
+    ttlSeconds,
+    updateChannelMutation,
+  ]);
 
   const handleFileSelect = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -950,6 +1024,7 @@ export function useChannelController() {
     handleSync,
     handleApplyHistoryEntry,
     handleDeleteHistoryEntry,
+    handleCopyLocal,
     handleCopyRemote,
     handleDeleteRemoteFile,
     handleCopyFile,
@@ -961,5 +1036,6 @@ export function useChannelController() {
     handleDrop,
     handleCopyChannelLink,
     handleCopyChannelPassword,
+    handleFlushChannel,
   };
 }

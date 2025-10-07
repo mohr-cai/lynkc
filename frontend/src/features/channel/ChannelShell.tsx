@@ -68,6 +68,7 @@ export function ChannelShell() {
                 onRemoveFile={controller.handleRemoveLocalFile}
                 onCopyFile={controller.handleCopyFile}
                 onDownloadFile={controller.handleDownloadFile}
+                onCopyLocal={controller.handleCopyLocal}
               />
             </div>
             <div className="flex flex-col gap-4 md:gap-6">
@@ -103,6 +104,8 @@ export function ChannelShell() {
                     onCopyFile={controller.handleCopyFile}
                     onDownloadFile={controller.handleDownloadFile}
                     onDeleteFile={controller.handleDeleteRemoteFile}
+                    onFlushBuffer={controller.handleFlushChannel}
+                    canFlush={!!controller.channelId && !controller.isSyncing}
                   />
                 </div>
                 <div className={`${mobilePanel === "history" ? "block" : "hidden"} md:block`}>

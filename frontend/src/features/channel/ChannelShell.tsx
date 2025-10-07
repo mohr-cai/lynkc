@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { PlugZap } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { HistoryPanel } from "./HistoryPanel";
 
 export function ChannelShell() {
   const controller = useChannelController();
+  const [mobilePanel, setMobilePanel] = useState<"remote" | "history">("remote");
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-10 md:px-10">
@@ -49,7 +51,7 @@ export function ChannelShell() {
               <CardDescription>Draft locally; encrypted sync ticks every 2s.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1.85fr)] lg:gap-10">
+          <CardContent className="flex flex-col gap-6 md:grid md:grid-cols-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1.85fr)] lg:gap-10">
             <div className="flex flex-col gap-6">
               <ChannelPad
                 localContent={controller.localContent}
@@ -68,22 +70,50 @@ export function ChannelShell() {
                 onDownloadFile={controller.handleDownloadFile}
               />
             </div>
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-              <RemotePanel
-                remoteContent={controller.remoteContent}
-                remoteFiles={controller.remoteFiles}
-                isLocked={controller.requiresPassword}
-                onCopyRemote={controller.handleCopyRemote}
-                onCopyFile={controller.handleCopyFile}
-                onDownloadFile={controller.handleDownloadFile}
-                onDeleteFile={controller.handleDeleteRemoteFile}
-              />
-              <HistoryPanel
-                entries={controller.history}
-                isLocked={controller.requiresPassword}
-                onSelectEntry={controller.handleApplyHistoryEntry}
-                onDeleteEntry={controller.handleDeleteHistoryEntry}
-              />
+            <div className="flex flex-col gap-4 md:gap-6">
+              <div className="flex items-center gap-2 md:hidden">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mobilePanel === "remote" ? "secondary" : "ghost"}
+                  className="flex-1"
+                  aria-pressed={mobilePanel === "remote"}
+                  onClick={() => setMobilePanel("remote")}
+                >
+                  Remote buffer
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mobilePanel === "history" ? "secondary" : "ghost"}
+                  className="flex-1"
+                  aria-pressed={mobilePanel === "history"}
+                  onClick={() => setMobilePanel("history")}
+                >
+                  History
+                </Button>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+                <div className={`${mobilePanel === "remote" ? "block" : "hidden"} md:block`}>
+                  <RemotePanel
+                    remoteContent={controller.remoteContent}
+                    remoteFiles={controller.remoteFiles}
+                    isLocked={controller.requiresPassword}
+                    onCopyRemote={controller.handleCopyRemote}
+                    onCopyFile={controller.handleCopyFile}
+                    onDownloadFile={controller.handleDownloadFile}
+                    onDeleteFile={controller.handleDeleteRemoteFile}
+                  />
+                </div>
+                <div className={`${mobilePanel === "history" ? "block" : "hidden"} md:block`}>
+                  <HistoryPanel
+                    entries={controller.history}
+                    isLocked={controller.requiresPassword}
+                    onSelectEntry={controller.handleApplyHistoryEntry}
+                    onDeleteEntry={controller.handleDeleteHistoryEntry}
+                  />
+                </div>
+              </div>
             </div>
             <div className="md:col-span-2">
               <Button

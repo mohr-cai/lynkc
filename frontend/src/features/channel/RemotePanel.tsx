@@ -50,7 +50,7 @@ export function RemotePanel({
             spellCheck={false}
             readOnly
             value={isLocked ? placeholderContent : remoteContent}
-            className="min-h-[220px] bg-background/40 font-mono"
+            className="min-h-[160px] md:min-h-[220px] bg-background/40 font-mono"
           />
           {isLocked ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-background/80 text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">

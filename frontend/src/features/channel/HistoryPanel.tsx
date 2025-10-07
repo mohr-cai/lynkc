@@ -61,7 +61,7 @@ export function HistoryPanel({ entries, isLocked, onSelectEntry, onDeleteEntry }
         </Label>
         <p className="text-xs text-muted-foreground">Snapshots mirror via Redis Streams and vanish with the TTL.</p>
       </div>
-      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm max-h-[28rem] overflow-y-auto">
+      <div className="space-y-2 rounded-md border border-dashed border-border/60 p-3 text-sm md:max-h-[28rem] md:overflow-y-auto">
         {isLocked ? (
           <p className="text-muted-foreground">Unlock with the PSK to resume history.</p>
         ) : entries.length === 0 ? (

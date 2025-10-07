@@ -55,7 +55,7 @@ export function ChannelPad({
           placeholder="Paste logs, configs, or hex dumps"
           value={localContent}
           onChange={(event) => onLocalContentChange(event.target.value)}
-          className="min-h-[220px] bg-background/60 backdrop-blur"
+          className="min-h-[180px] md:min-h-[220px] bg-background/60 backdrop-blur"
         />
       </div>
       <div className="space-y-2">
